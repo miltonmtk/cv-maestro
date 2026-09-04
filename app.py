@@ -605,3 +605,102 @@ def ejecutar_pruebas() -> None:
 
 if __name__ == "__main__":
     ejecutar_pruebas()
+
+# ============================================================
+# 10. ANALIZADOR BÁSICO DE VACANTES
+# ============================================================
+
+def analizar_vacante(
+    titulo: str,
+    requisitos: List[str],
+) -> Dict[str, Any]:
+
+    resultados = []
+
+    for requisito in requisitos:
+        coincidencias = buscar_palabra_clave(requisito)
+
+        resultados.append(
+            {
+                "requisito": requisito,
+                "coincidencias": coincidencias,
+                "cumple": bool(coincidencias),
+            }
+        )
+
+    total = len(resultados)
+    cumplidos = sum(1 for r in resultados if r["cumple"])
+
+    porcentaje = round(
+        (cumplidos / total) * 100,
+        2,
+    ) if total else 0.0
+
+    return {
+        "vacante": titulo,
+        "requisitos_analizados": total,
+        "requisitos_con_coincidencia": cumplidos,
+        "coincidencia_porcentaje": porcentaje,
+        "detalle": resultados,
+    }
+
+
+def mostrar_analisis_vacante(
+    analisis: Dict[str, Any],
+) -> None:
+
+    print("\n" + "=" * 72)
+    print("ANÁLISIS DE VACANTE")
+    print("=" * 72)
+
+    print(
+        f'Vacante: {analisis["vacante"]}'
+    )
+
+    print(
+        f'Coincidencia inicial: '
+        f'{analisis["coincidencia_porcentaje"]}%'
+    )
+
+    print("\nREQUISITOS:")
+
+    for item in analisis["detalle"]:
+
+        estado = (
+            "COINCIDENCIA"
+            if item["cumple"]
+            else "SIN COINCIDENCIA"
+        )
+
+        print(
+            f'- {item["requisito"]}: {estado}'
+        )
+
+        for coincidencia in item["coincidencias"]:
+            print(
+                f"    {coincidencia}"
+            )
+
+
+    def prueba_vacante() -> None:
+
+        requisitos_prueba = [
+            "electrónica",
+            "formación",
+            "Python",
+            "ventas",
+            "pedagogía",
+        ]
+
+        analisis = analizar_vacante(
+            "Vacante de prueba",
+            requisitos_prueba,
+        )
+
+        mostrar_analisis_vacante(
+            analisis
+        )
+
+    if __name__ == "__main__":
+        ejecutar_pruebas()
+        prueba_vacante()
