@@ -7,70 +7,209 @@ VACANTE_SEGURCAIXA = {
 
     "requisitos": [
         {
-            "nombre": "Titulacion universitaria o superior relacionada",
+            "nombre": "Titulacion universitaria relacionada",
             "tipo": "obligatorio",
             "peso": 5,
-            "palabras_clave": ["licenciatura", "educacion", "pedagogia", "procesos pedagogicos"],
+            "palabras_clave": ["licenciatura"],
+            "palabras_directas": ["licenciatura"],
+            "palabras_transferibles": [],
         },
         {
-            "nombre": "Experiencia previa en gestion de formacion",
+            "nombre": "Experiencia en gestion de formacion",
             "tipo": "obligatorio",
             "peso": 5,
-            "palabras_clave": ["formacion profesional", "formacion de docentes", "procesos formativos", "capacitacion de instructores"],
+            "palabras_clave": [
+                "planeacion y orientacion de procesos formativos",
+                "procesos formativos",
+            ],
+            "palabras_directas": [
+                "planeacion y orientacion de procesos formativos",
+            ],
+            "palabras_transferibles": [
+                "procesos formativos",
+            ],
         },
         {
-            "nombre": "Diseno y gestion de planes formativos",
+            "nombre": "Diseno de planes y contenidos formativos",
             "tipo": "funcional",
             "peso": 4,
-            "palabras_clave": ["diseno curricular", "desarrollo curricular", "guias de aprendizaje", "estrategias didacticas"],
+            "palabras_clave": [
+                "diseno curricular",
+                "desarrollo curricular",
+                "guias de aprendizaje",
+            ],
+            "palabras_directas": [
+                "diseno curricular",
+                "desarrollo curricular",
+                "guias de aprendizaje",
+            ],
+            "palabras_transferibles": [],
         },
         {
             "nombre": "Deteccion de necesidades formativas",
             "tipo": "funcional",
             "peso": 3,
-            "palabras_clave": ["necesidades formativas", "procesos formativos"],
+            "palabras_clave": [
+                "necesidades formativas",
+                "procesos formativos",
+            ],
+            "palabras_directas": [
+                "necesidades formativas",
+            ],
+            "palabras_transferibles": [
+                "procesos formativos",
+            ],
         },
         {
-            "nombre": "Coordinacion y evaluacion de acciones formativas",
+            "nombre": "Coordinacion de acciones formativas",
             "tipo": "funcional",
             "peso": 4,
-            "palabras_clave": ["evaluacion formativa", "instrumentos de evaluacion", "capacitacion de instructores"],
+            "palabras_clave": [
+                "coordinacion de formacion",
+                "planeacion y orientacion de procesos formativos",
+            ],
+            "palabras_directas": [
+                "coordinacion de formacion",
+            ],
+            "palabras_transferibles": [
+                "planeacion y orientacion de procesos formativos",
+            ],
         },
         {
-            "nombre": "Formacion presencial, online e hibrida",
+            "nombre": "Evaluacion de acciones formativas",
+            "tipo": "funcional",
+            "peso": 4,
+            "palabras_clave": [
+                "evaluacion formativa",
+                "instrumentos de evaluacion",
+            ],
+            "palabras_directas": [
+                "evaluacion formativa",
+                "instrumentos de evaluacion",
+            ],
+            "palabras_transferibles": [],
+        },
+        {
+            "nombre": "Gestion de formacion presencial",
+            "tipo": "funcional",
+            "peso": 2,
+            "palabras_clave": [
+                "formacion presencial",
+            ],
+            "palabras_directas": [
+                "formacion presencial",
+            ],
+            "palabras_transferibles": [
+                "docencia",
+            ],
+        },
+        {
+            "nombre": "Gestion de formacion online o hibrida",
             "tipo": "funcional",
             "peso": 3,
-            "palabras_clave": ["formacion presencial", "formacion online", "formacion hibrida"],
+            "palabras_clave": [
+                "formacion online",
+                "formacion hibrida",
+            ],
+            "palabras_directas": [
+                "formacion online",
+                "formacion hibrida",
+            ],
+            "palabras_transferibles": [],
         },
         {
             "nombre": "Gestion de proveedores externos de formacion",
             "tipo": "funcional",
             "peso": 3,
-            "palabras_clave": ["proveedores", "proveedores de formacion"],
+            "palabras_clave": [
+                "proveedores de formacion",
+                "proveedores",
+            ],
+            "palabras_directas": [
+                "proveedores de formacion",
+            ],
+            "palabras_transferibles": [
+                "proveedores",
+            ],
         },
         {
-            "nombre": "Seguimiento, informes y resultados de formacion",
+            "nombre": "Seguimiento de acciones formativas",
             "tipo": "funcional",
             "peso": 3,
-            "palabras_clave": ["seguimiento", "informes", "reportes", "evaluacion"],
+            "palabras_clave": [
+                "seguimiento de acciones formativas",
+                "evaluacion formativa",
+            ],
+            "palabras_directas": [
+                "seguimiento de acciones formativas",
+            ],
+            "palabras_transferibles": [
+                "evaluacion formativa",
+            ],
         },
         {
-            "nombre": "Soporte a auditorias y planes de mejora",
+            "nombre": "Elaboracion de informes y reportes de formacion",
+            "tipo": "funcional",
+            "peso": 3,
+            "palabras_clave": [
+                "informes de formacion",
+                "reportes de formacion",
+            ],
+            "palabras_directas": [
+                "informes de formacion",
+                "reportes de formacion",
+            ],
+            "palabras_transferibles": [],
+        },
+        {
+            "nombre": "Soporte a auditorias de formacion",
             "tipo": "funcional",
             "peso": 2,
-            "palabras_clave": ["auditorias", "planes de mejora"],
+            "palabras_clave": [
+                "auditorias de formacion",
+            ],
+            "palabras_directas": [
+                "auditorias de formacion",
+            ],
+            "palabras_transferibles": [],
+        },
+        {
+            "nombre": "Planes de mejora",
+            "tipo": "funcional",
+            "peso": 2,
+            "palabras_clave": [
+                "planes de mejora",
+            ],
+            "palabras_directas": [
+                "planes de mejora",
+            ],
+            "palabras_transferibles": [],
         },
         {
             "nombre": "Gestion de plataforma LMS",
             "tipo": "funcional",
             "peso": 3,
-            "palabras_clave": ["LMS", "plataforma de formacion online"],
+            "palabras_clave": [
+                "LMS",
+            ],
+            "palabras_directas": [
+                "LMS",
+            ],
+            "palabras_transferibles": [],
         },
         {
             "nombre": "Experiencia en consultoria o entorno corporativo",
             "tipo": "deseable",
             "peso": 2,
-            "palabras_clave": ["consultoria", "entorno corporativo"],
+            "palabras_clave": [
+                "consultoria",
+                "entorno corporativo",
+            ],
+            "palabras_directas": [
+                "consultoria",
+                "entorno corporativo",
+            ],
+            "palabras_transferibles": [],
         },
     ],
 }
