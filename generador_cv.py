@@ -645,6 +645,37 @@ def seleccionar_experiencias(
 
     evaluadas = []
 
+    def coincide_contexto_amplio(
+        funcion: str,
+    ) -> bool:
+
+        texto = normalizar(funcion)
+
+        palabras_funcion = texto.split()
+
+        for palabra_contexto in contexto:
+
+            palabra_contexto = normalizar(
+                palabra_contexto
+            )
+
+            if len(palabra_contexto) < 5:
+                continue
+
+            raiz = palabra_contexto[:6]
+
+            for palabra_funcion in palabras_funcion:
+
+                if (
+                    len(palabra_funcion) >= 5
+                    and palabra_funcion.startswith(
+                        raiz
+                    )
+                ):
+                    return True
+
+        return False
+
     for indice, experiencia in enumerate(
         experiencias
     ):
@@ -654,6 +685,10 @@ def seleccionar_experiencias(
             dict,
         ):
             continue
+
+        funciones_originales = obtener_funciones(
+            experiencia
+        )
 
         funciones = funciones_relevantes(
             experiencia,
@@ -687,23 +722,57 @@ def seleccionar_experiencias(
             )
         )
 
-        coincidencias_directas_encabezado = sum(
-            1
-            for termino in directos
-            if contiene(
+        encabezado_directo = any(
+            contiene(
                 texto_encabezado,
                 termino,
             )
+            for termino in directos
         )
 
-        # REGLA:
-        # Si después del filtrado no queda ninguna
-        # función relevante, la experiencia se elimina,
-        # excepto cuando su propio encabezado tiene
-        # evidencia DIRECTA para la vacante.
+        funcion_directa = any(
+            any(
+                contiene(
+                    normalizar(funcion),
+                    termino,
+                )
+                for termino in directos
+            )
+            for funcion in funciones_originales
+        )
+
+        experiencia_anclada = (
+            encabezado_directo
+            or funcion_directa
+        )
+
+        # Si la experiencia tiene evidencia directa,
+        # también puede conservar funciones de apoyo
+        # claramente relacionadas con el contexto
+        # de la misma vacante.
+        if experiencia_anclada:
+
+            for funcion in funciones_originales:
+
+                if funcion in funciones:
+                    continue
+
+                if coincide_contexto_amplio(
+                    funcion
+                ):
+                    funciones.append(
+                        funcion
+                    )
+
+                if (
+                    len(funciones)
+                    >= MAX_FUNCIONES_POR_EXPERIENCIA
+                ):
+                    break
+
         if (
             not funciones
-            and coincidencias_directas_encabezado == 0
+            and not encabezado_directo
         ):
             continue
 
@@ -747,7 +816,9 @@ def seleccionar_experiencias(
         if funciones:
             copia[
                 "funciones_relevantes"
-            ] = funciones
+            ] = funciones[
+                :MAX_FUNCIONES_POR_EXPERIENCIA
+            ]
 
         evaluadas.append(
             (
@@ -1282,6 +1353,7 @@ def renderizar_formacion(
             "periodo",
             "año",
             "ano",
+            "anio",
         )
     )
 
