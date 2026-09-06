@@ -1,0 +1,274 @@
+{
+  "titulo": "Director/a de Estrategia Digital y Transformacion Educativa",
+  "empresa": "Universidad Europea",
+  "ubicacion": "Villaviciosa de Odon, Comunidad de Madrid",
+  "url": "https://www.linkedin.com/jobs/view/4432596056/",
+  "estado": "VACANTE REAL - VERIFICADA",
+
+  "requisitos": [
+    {
+      "nombre": "Licenciatura o Grado afin al ambito educativo o disciplinar",
+      "tipo": "obligatorio",
+      "peso": 5,
+      "palabras_clave": [
+        "licenciatura",
+        "educacion"
+      ],
+      "palabras_directas": [
+        "licenciatura"
+      ],
+      "palabras_transferibles": [
+        "educacion"
+      ]
+    },
+    {
+      "nombre": "Doctorado",
+      "tipo": "obligatorio",
+      "peso": 5,
+      "palabras_clave": [
+        "doctorado"
+      ],
+      "palabras_directas": [
+        "doctorado"
+      ],
+      "palabras_transferibles": []
+    },
+    {
+      "nombre": "Posgrado en innovacion educativa o transformacion digital",
+      "tipo": "deseable",
+      "peso": 2,
+      "palabras_clave": [
+        "innovacion educativa",
+        "transformacion digital"
+      ],
+      "palabras_directas": [
+        "innovacion educativa",
+        "transformacion digital"
+      ],
+      "palabras_transferibles": [
+        "procesos pedagogicos",
+        "herramientas digitales"
+      ]
+    },
+    {
+      "nombre": "Experiencia docente universitaria minima de 5 anos",
+      "tipo": "obligatorio",
+      "peso": 5,
+      "palabras_clave": [
+        "docencia universitaria",
+        "docente hora catedra"
+      ],
+      "palabras_directas": [
+        "docencia universitaria",
+        "docente hora catedra"
+      ],
+      "palabras_transferibles": [
+        "docencia"
+      ]
+    },
+    {
+      "nombre": "Gestion academica o educativa en entornos digitales minima de 3 anos",
+      "tipo": "obligatorio",
+      "peso": 5,
+      "palabras_clave": [
+        "gestion academica",
+        "gestion educativa",
+        "entornos digitales"
+      ],
+      "palabras_directas": [
+        "gestion academica",
+        "gestion educativa",
+        "entornos digitales"
+      ],
+      "palabras_transferibles": [
+        "procesos pedagogicos",
+        "herramientas digitales"
+      ]
+    },
+    {
+      "nombre": "Liderazgo de proyectos transversales y equipos multidisciplinares",
+      "tipo": "obligatorio",
+      "peso": 4,
+      "palabras_clave": [
+        "liderazgo de proyectos",
+        "proyectos transversales",
+        "equipos multidisciplinares"
+      ],
+      "palabras_directas": [
+        "liderazgo de proyectos",
+        "proyectos transversales",
+        "equipos multidisciplinares"
+      ],
+      "palabras_transferibles": [
+        "proyectos",
+        "formacion de docentes"
+      ]
+    },
+    {
+      "nombre": "Modelos pedagogicos y tendencias en educacion superior",
+      "tipo": "funcional",
+      "peso": 4,
+      "palabras_clave": [
+        "pedagogia",
+        "procesos pedagogicos",
+        "estrategias didacticas"
+      ],
+      "palabras_directas": [
+        "pedagogia",
+        "procesos pedagogicos",
+        "estrategias didacticas"
+      ],
+      "palabras_transferibles": []
+    },
+    {
+      "nombre": "Estrategia digital aplicada a la educacion y docencia online",
+      "tipo": "funcional",
+      "peso": 4,
+      "palabras_clave": [
+        "estrategia digital",
+        "docencia online",
+        "formacion online"
+      ],
+      "palabras_directas": [
+        "estrategia digital",
+        "docencia online",
+        "formacion online"
+      ],
+      "palabras_transferibles": [
+        "herramientas digitales"
+      ]
+    },
+    {
+      "nombre": "Innovacion educativa y tecnologica aplicada al aprendizaje",
+      "tipo": "funcional",
+      "peso": 4,
+      "palabras_clave": [
+        "innovacion educativa",
+        "tecnologia aplicada al aprendizaje",
+        "estrategias didacticas"
+      ],
+      "palabras_directas": [
+        "innovacion educativa",
+        "tecnologia aplicada al aprendizaje"
+      ],
+      "palabras_transferibles": [
+        "estrategias didacticas",
+        "herramientas digitales"
+      ]
+    },
+    {
+      "nombre": "Gestion de proyectos y definicion de KPIs",
+      "tipo": "funcional",
+      "peso": 3,
+      "palabras_clave": [
+        "gestion de proyectos",
+        "kpi",
+        "indicadores"
+      ],
+      "palabras_directas": [
+        "gestion de proyectos",
+        "kpi",
+        "indicadores"
+      ],
+      "palabras_transferibles": [
+        "proyectos"
+      ]
+    },
+    {
+      "nombre": "Marco regulatorio y calidad universitaria",
+      "tipo": "funcional",
+      "peso": 3,
+      "palabras_clave": [
+        "calidad universitaria",
+        "acreditacion universitaria",
+        "marco regulatorio"
+      ],
+      "palabras_directas": [
+        "calidad universitaria",
+        "acreditacion universitaria",
+        "marco regulatorio"
+      ],
+      "palabras_transferibles": [
+        "evaluacion"
+      ]
+    },
+    {
+      "nombre": "Integracion pedagogica de inteligencia artificial",
+      "tipo": "funcional",
+      "peso": 3,
+      "palabras_clave": [
+        "inteligencia artificial",
+        "ia aplicada",
+        "python"
+      ],
+      "palabras_directas": [
+        "inteligencia artificial",
+        "ia aplicada"
+      ],
+      "palabras_transferibles": [
+        "python",
+        "herramientas digitales"
+      ]
+    },
+    {
+      "nombre": "Analitica de aprendizaje y uso de datos",
+      "tipo": "funcional",
+      "peso": 3,
+      "palabras_clave": [
+        "analitica de aprendizaje",
+        "analitica",
+        "datos"
+      ],
+      "palabras_directas": [
+        "analitica de aprendizaje",
+        "analitica de datos"
+      ],
+      "palabras_transferibles": [
+        "python"
+      ]
+    },
+    {
+      "nombre": "Gestion o evolucion de plataforma LMS",
+      "tipo": "funcional",
+      "peso": 3,
+      "palabras_clave": [
+        "lms",
+        "canvas"
+      ],
+      "palabras_directas": [
+        "lms",
+        "canvas"
+      ],
+      "palabras_transferibles": []
+    },
+    {
+      "nombre": "Formacion y desarrollo del profesorado",
+      "tipo": "funcional",
+      "peso": 4,
+      "palabras_clave": [
+        "formacion de docentes",
+        "capacitacion de instructores",
+        "desarrollo del profesorado"
+      ],
+      "palabras_directas": [
+        "formacion de docentes",
+        "capacitacion de instructores"
+      ],
+      "palabras_transferibles": []
+    },
+    {
+      "nombre": "Ingles nivel C1",
+      "tipo": "obligatorio",
+      "peso": 5,
+      "palabras_clave": [
+        "ingles c1",
+        "c1"
+      ],
+      "palabras_directas": [
+        "ingles c1",
+        "c1"
+      ],
+      "palabras_transferibles": []
+    }
+  ]
+}
