@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+
+# Salidas generadas
+salidas/
+
+# Respaldos
+respaldos/
+*_backup.py
+*_respaldo*.py
+*_antes_*.py
+*_antes_*.json
+
+# Scripts temporales de ajuste/correccion
+afinar_comunicaciones.py
+ajustar_funciones_v21.py
+cerrar_experiencias_v21.py
+corregir_salida_cv.py
+
+# Fotografias personales
+FOTO*.png
+FOTO*.jpg
+FOTO*.jpeg
+foto*.png
+foto*.jpg
+foto*.jpeg
