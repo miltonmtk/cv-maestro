@@ -333,13 +333,23 @@ def ejecutar_procesamiento(
             ],
         )
 
+    if estado == "NO_POSTULAR":
+        raise OrquestadorError(
+            "DECISIÓN PROFESIONAL: NO_POSTULAR.\n"
+            f"IAP: {resultado.get('iap', 0.0)} "
+            f"/ umbral {resultado.get('umbral_iap', 70.0)}.\n"
+            + incidencias_texto(
+                resultado
+            )
+        )
+
     if (
         estado != "PROCESADA"
         or auditoria != "APROBADO"
     ):
         raise OrquestadorError(
-            "La candidatura no superó "
-            "la auditoría.\n"
+            "La candidatura no pudo continuar "
+            "por un fallo técnico o de auditoría.\n"
             + incidencias_texto(
                 resultado
             )

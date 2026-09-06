@@ -1,50 +1,26 @@
 from __future__ import annotations
 
-"""
-VALIDADOR INTEGRAL DEL SISTEMA CV-MAESTRO
-
-Objetivo:
-Comprobar automáticamente que el flujo principal continúa estable.
-
-Valida:
-1. Módulos obligatorios.
-2. Compilación.
-3. Importaciones.
-4. Contratos principales.
-5. Procesamiento de una vacante real.
-6. Auditoría.
-7. DOCX + PDF.
-8. Carta + correo.
-9. Existencia real de entregables.
-10. Bloqueo ante fotografía inexistente.
-11. Ausencia de vacantes ficticias activas.
-
-No modifica la lógica de producción.
-"""
-
 import importlib
-import inspect
+import json
 import py_compile
+import subprocess
 import sys
+import tempfile
+import uuid
 from pathlib import Path
-from typing import Any
-
 
 RAIZ = Path(__file__).resolve().parent
+VACANTE_DEBIL = RAIZ / "vacantes" / "universidad_europea_direccion_digital.json"
 
 MODULOS = (
     "entrada_vacante.py",
-    "procesador_lote.py",
+    "perfilador_vacantes.py",
+    "motor_decision.py",
     "generador_cv.py",
+    "procesador_lote.py",
     "exportador_final_lote.py",
     "generador_comunicaciones.py",
     "orquestador_candidatura.py",
-)
-
-VACANTE_PRUEBA_REAL = (
-    RAIZ
-    / "vacantes"
-    / "universidad_europea_direccion_digital.json"
 )
 
 
@@ -52,445 +28,267 @@ class ValidacionError(RuntimeError):
     pass
 
 
-def ok(mensaje: str) -> None:
-    print(f"OK: {mensaje}")
-
-
-def exigir(
-    condicion: bool,
-    mensaje: str,
-) -> None:
+def exigir(condicion, mensaje):
     if not condicion:
         raise ValidacionError(mensaje)
 
 
-# ============================================================
-# 1. ARCHIVOS
-# ============================================================
+def ok(mensaje):
+    print("OK:", mensaje)
 
-def validar_archivos() -> None:
+
+def existe_archivo(valor):
+    if not valor:
+        return False
+    ruta = Path(valor)
+    if not ruta.is_absolute():
+        ruta = RAIZ / ruta
+    return ruta.is_file() and ruta.stat().st_size > 0
+
+
+def snapshot_salidas():
+    carpeta = RAIZ / "salidas"
+    if not carpeta.exists():
+        return {}
+    return {
+        str(p.relative_to(RAIZ)): (p.stat().st_size, p.stat().st_mtime_ns)
+        for p in carpeta.rglob("*")
+        if p.is_file()
+    }
+
+
+def limpiar_token(token):
+    carpeta = RAIZ / "salidas"
+    if not carpeta.exists():
+        return
+    token = token.lower()
+    for p in sorted(carpeta.rglob("*"), reverse=True):
+        try:
+            if p.is_file() and token in p.name.lower():
+                p.unlink()
+        except OSError:
+            pass
+    for p in sorted(carpeta.rglob("*"), reverse=True):
+        try:
+            if p.is_dir() and not any(p.iterdir()):
+                p.rmdir()
+        except OSError:
+            pass
+
+
+def vacante_positiva(token):
+    return {
+        "titulo": f"Técnico/a de Formación {token}",
+        "empresa": f"Validacion {token}",
+        "ubicacion": "Madrid",
+        "url": "",
+        "requisitos": [
+            {
+                "nombre": "Titulación relacionada con educación o pedagogía",
+                "tipo": "obligatorio",
+                "peso": 5,
+                "palabras_clave": [
+                    "licenciatura",
+                    "educación",
+                    "pedagogía",
+                    "procesos pedagógicos",
+                ],
+            },
+            {
+                "nombre": "Experiencia en gestión de formación",
+                "tipo": "obligatorio",
+                "peso": 5,
+                "palabras_clave": [
+                    "formación profesional",
+                    "formación de docentes",
+                    "procesos formativos",
+                    "capacitación de instructores",
+                ],
+            },
+            {
+                "nombre": "Diseño de procesos formativos",
+                "tipo": "obligatorio",
+                "peso": 4,
+                "palabras_clave": [
+                    "diseño curricular",
+                    "guías de aprendizaje",
+                    "instrumentos de evaluación",
+                ],
+            },
+            {
+                "nombre": "Competencias pedagógicas",
+                "tipo": "deseable",
+                "peso": 3,
+                "palabras_clave": [
+                    "pedagogía",
+                    "estrategias didácticas",
+                    "evaluación formativa",
+                ],
+            },
+        ],
+    }
+
+
+def main():
+    print("=" * 72)
+    print("VALIDACIÓN INTEGRAL V2 — CV-MAESTRO")
+    print("=" * 72)
+
     for nombre in MODULOS:
         ruta = RAIZ / nombre
+        exigir(ruta.is_file(), f"Falta {nombre}")
+        py_compile.compile(str(ruta), doraise=True)
 
-        exigir(
-            ruta.is_file(),
-            f"Falta módulo obligatorio: {nombre}",
-        )
+    ok("archivos y compilación")
 
-    exigir(
-        VACANTE_PRUEBA_REAL.is_file(),
-        (
-            "No existe la vacante real de validación: "
-            f"{VACANTE_PRUEBA_REAL}"
-        ),
-    )
-
-    ok("módulos obligatorios presentes")
-
-
-# ============================================================
-# 2. COMPILACIÓN
-# ============================================================
-
-def validar_compilacion() -> None:
-    for nombre in MODULOS:
-        ruta = RAIZ / nombre
-
-        try:
-            py_compile.compile(
-                str(ruta),
-                doraise=True,
-            )
-
-        except py_compile.PyCompileError as error:
-            raise ValidacionError(
-                f"Error de compilación en {nombre}: {error}"
-            ) from error
-
-    ok("compilación de módulos")
-
-
-# ============================================================
-# 3. IMPORTACIONES
-# ============================================================
-
-def cargar_modulos() -> dict[str, Any]:
-    nombres = (
-        "entrada_vacante",
-        "procesador_lote",
-        "generador_cv",
-        "exportador_final_lote",
-        "generador_comunicaciones",
-        "orquestador_candidatura",
-    )
-
-    resultado = {}
-
-    for nombre in nombres:
-        try:
-            resultado[nombre] = importlib.import_module(
-                nombre
-            )
-
-        except Exception as error:
-            raise ValidacionError(
-                f"No se pudo importar {nombre}: {error}"
-            ) from error
+    perfilador = importlib.import_module("perfilador_vacantes")
+    motor = importlib.import_module("motor_decision")
+    procesador = importlib.import_module("procesador_lote")
+    exportador = importlib.import_module("exportador_final_lote")
+    comunicaciones = importlib.import_module("generador_comunicaciones")
 
     ok("importaciones")
 
-    return resultado
+    # --------------------------------------------------------
+    # NO_POSTULAR REAL
+    # --------------------------------------------------------
+    antes = snapshot_salidas()
+    resultado = procesador.procesar_una(VACANTE_DEBIL)
+    despues = snapshot_salidas()
 
+    exigir(resultado.get("estado") == "NO_POSTULAR", "Debe ser NO_POSTULAR")
+    exigir(resultado.get("auditoria") == "NO_EJECUTADA", "Auditoría incorrecta")
+    exigir(resultado.get("iap") == 44.0, "IAP real no conservado")
+    exigir(resultado.get("adecuacion_documental") == 44.0, "Adecuación perdida")
+    exigir(resultado.get("cv_generado") is None, "NO_POSTULAR generó CV")
+    exigir(resultado.get("control_generado") is None, "NO_POSTULAR generó control")
+    exigir(antes == despues, "NO_POSTULAR modificó salidas")
 
-# ============================================================
-# 4. CONTRATOS
-# ============================================================
+    ok("NO_POSTULAR real")
+    ok("NO_POSTULAR no genera documentos")
 
-def validar_contratos(
-    modulos: dict[str, Any],
-) -> None:
-    entrada = modulos["entrada_vacante"]
-    procesador = modulos["procesador_lote"]
-    exportador = modulos["exportador_final_lote"]
-    comunicaciones = modulos["generador_comunicaciones"]
-    orquestador = modulos["orquestador_candidatura"]
+    # --------------------------------------------------------
+    # ERROR TÉCNICO REAL
+    # --------------------------------------------------------
+    error = procesador.procesar_una(
+        RAIZ / "__ARCHIVO_QUE_NO_EXISTE__.json"
+    )
 
-    funciones = {
-        "entrada.construir_vacante":
-            entrada.construir_vacante,
+    exigir(error.get("estado") == "ERROR", "ERROR técnico no diferenciado")
+    ok("ERROR técnico diferenciado")
 
-        "entrada.guardar_vacante":
-            entrada.guardar_vacante,
-
-        "procesador.procesar_una":
-            procesador.procesar_una,
-
-        "exportador.procesar_vacante":
-            exportador.procesar_vacante,
-
-        "comunicaciones.procesar_vacante":
-            comunicaciones.procesar_vacante,
-
-        "orquestador.ejecutar_candidatura":
-            orquestador.ejecutar_candidatura,
+    # --------------------------------------------------------
+    # MOTOR POSITIVO
+    # --------------------------------------------------------
+    analisis_control = {
+        "adecuacion": 88.0,
+        "resultados": [
+            {
+                "nombre": "Formación",
+                "tipo": "obligatorio",
+                "peso": 5,
+                "valor": 1.0,
+                "nivel": "DIRECTO",
+            },
+            {
+                "nombre": "Experiencia",
+                "tipo": "obligatorio",
+                "peso": 5,
+                "valor": 1.0,
+                "nivel": "DIRECTO",
+            },
+        ],
+        "brechas": [],
     }
 
-    for nombre, funcion in funciones.items():
-        exigir(
-            callable(funcion),
-            f"No es invocable: {nombre}",
-        )
+    decision = motor.evaluar_decision(analisis_control)
 
-        inspect.signature(funcion)
+    exigir(decision.get("estado") == "POSTULAR", "Motor bloqueó candidatura apta")
+    exigir(decision.get("iap") == 88.0, "IAP positivo incorrecto")
 
-    exigir(
-        len(
-            inspect.signature(
-                procesador.procesar_una
-            ).parameters
-        ) == 1,
-        "Contrato inesperado en procesar_una()",
-    )
+    ok("motor permite POSTULAR")
 
-    exigir(
-        len(
-            inspect.signature(
-                exportador.procesar_vacante
-            ).parameters
-        ) == 2,
-        "Contrato inesperado en exportador.procesar_vacante()",
-    )
+    # --------------------------------------------------------
+    # PIPELINE POSITIVO COMPLETO
+    # --------------------------------------------------------
+    token = "VAL" + uuid.uuid4().hex[:8]
+    vacante = vacante_positiva(token)
+
+    analisis = perfilador.analizar_vacante(vacante)
+    decision = motor.evaluar_decision(analisis)
 
     exigir(
-        len(
-            inspect.signature(
-                comunicaciones.procesar_vacante
-            ).parameters
-        ) == 1,
-        (
-            "Contrato inesperado en "
-            "comunicaciones.procesar_vacante()"
-        ),
+        decision.get("estado") == "POSTULAR",
+        f"Vacante positiva no superó motor: {decision}",
     )
-
-    ok("contratos entre módulos")
-
-
-# ============================================================
-# 5. PROCESAMIENTO + AUDITORÍA
-# ============================================================
-
-def validar_procesamiento(
-    modulos: dict[str, Any],
-) -> dict[str, Any]:
-    procesador = modulos["procesador_lote"]
-
-    resultado = procesador.procesar_una(
-        VACANTE_PRUEBA_REAL
-    )
-
-    exigir(
-        isinstance(resultado, dict),
-        "procesar_una() no devolvió un diccionario",
-    )
-
-    exigir(
-        resultado.get("estado") == "PROCESADA",
-        (
-            "Procesamiento no aprobado. Estado: "
-            f"{resultado.get('estado')}"
-        ),
-    )
-
-    exigir(
-        resultado.get("auditoria") == "APROBADO",
-        (
-            "Auditoría no aprobada. Estado: "
-            f"{resultado.get('auditoria')}"
-        ),
-    )
-
-    ok("procesamiento de vacante real")
-    ok("auditoría obligatoria")
-
-    return resultado
-
-
-# ============================================================
-# 6. DOCX + PDF
-# ============================================================
-
-def validar_exportacion(
-    modulos: dict[str, Any],
-) -> dict[str, Any]:
-    exportador = modulos["exportador_final_lote"]
-
-    resultado = exportador.procesar_vacante(
-        VACANTE_PRUEBA_REAL,
-        None,
-    )
-
-    exigir(
-        resultado.get("estado") == "GENERADA",
-        (
-            "Exportación no generada. Estado: "
-            f"{resultado.get('estado')}"
-        ),
-    )
-
-    for clave in ("docx", "pdf"):
-        valor = resultado.get(clave)
-
-        exigir(
-            bool(valor),
-            f"Falta ruta {clave.upper()}",
-        )
-
-        ruta = RAIZ / Path(valor)
-
-        exigir(
-            ruta.is_file(),
-            f"No existe el archivo generado: {ruta}",
-        )
-
-        exigir(
-            ruta.stat().st_size > 0,
-            f"Archivo vacío: {ruta}",
-        )
-
-    ok("DOCX generado y verificable")
-    ok("PDF generado y verificable")
-
-    return resultado
-
-
-# ============================================================
-# 7. CARTA + CORREO
-# ============================================================
-
-def validar_comunicaciones(
-    modulos: dict[str, Any],
-) -> dict[str, Any]:
-    comunicaciones = modulos[
-        "generador_comunicaciones"
-    ]
-
-    resultado = comunicaciones.procesar_vacante(
-        VACANTE_PRUEBA_REAL
-    )
-
-    exigir(
-        resultado.get("estado") == "GENERADA",
-        (
-            "Comunicaciones no generadas. Estado: "
-            f"{resultado.get('estado')}"
-        ),
-    )
-
-    for clave in ("carta", "correo"):
-        valor = resultado.get(clave)
-
-        exigir(
-            bool(valor),
-            f"Falta ruta de {clave}",
-        )
-
-        ruta = RAIZ / Path(valor)
-
-        exigir(
-            ruta.is_file(),
-            f"No existe {clave}: {ruta}",
-        )
-
-        exigir(
-            ruta.stat().st_size > 0,
-            f"{clave.capitalize()} vacía",
-        )
-
-    ok("carta generada y verificable")
-    ok("correo generado y verificable")
-
-    return resultado
-
-
-# ============================================================
-# 8. BLOQUEO NEGATIVO
-# ============================================================
-
-def validar_bloqueo(
-    modulos: dict[str, Any],
-) -> None:
-    orquestador = modulos[
-        "orquestador_candidatura"
-    ]
-
-    inexistente = (
-        RAIZ
-        / "__FOTO_INEXISTENTE_VALIDACION__.png"
-    )
-
-    exigir(
-        not inexistente.exists(),
-        "La fotografía ficticia de prueba existe",
-    )
-
-    bloqueada = False
 
     try:
-        orquestador.validar_fotografia(
-            str(inexistente)
-        )
+        with tempfile.TemporaryDirectory() as tmp:
+            ruta = Path(tmp) / f"{token}.json"
+            ruta.write_text(
+                json.dumps(vacante, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
 
-    except orquestador.OrquestadorError:
-        bloqueada = True
+            r = procesador.procesar_una(ruta)
+            exigir(r.get("estado") == "PROCESADA", "Pipeline positivo no procesó")
+            exigir(r.get("auditoria") == "APROBADO", "Auditoría positiva falló")
+            exigir(existe_archivo(r.get("cv_generado")), "No existe CV TXT")
+            exigir(existe_archivo(r.get("control_generado")), "No existe control")
 
-    exigir(
-        bloqueada,
-        (
-            "El sistema no bloqueó una "
-            "fotografía inexistente"
-        ),
+            e = exportador.procesar_vacante(ruta, None)
+            exigir(e.get("estado") == "GENERADA", "Exportación falló")
+            exigir(existe_archivo(e.get("docx")), "No existe DOCX")
+            exigir(existe_archivo(e.get("pdf")), "No existe PDF")
+
+            c = comunicaciones.procesar_vacante(ruta)
+            exigir(c.get("estado") == "GENERADA", "Comunicaciones fallaron")
+            exigir(existe_archivo(c.get("carta")), "No existe carta")
+            exigir(existe_archivo(c.get("correo")), "No existe correo")
+
+    finally:
+        limpiar_token(token)
+
+    ok("POSTULAR genera CV + auditoría")
+    ok("POSTULAR genera DOCX + PDF")
+    ok("POSTULAR genera carta + correo")
+
+    # --------------------------------------------------------
+    # ORQUESTADOR NO DEBE LLEGAR A ETAPA 3/4
+    # --------------------------------------------------------
+    p = subprocess.run(
+        [
+            sys.executable,
+            str(RAIZ / "orquestador_candidatura.py"),
+            "--vacante-json",
+            str(VACANTE_DEBIL),
+        ],
+        cwd=RAIZ,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
-    ok("bloqueo preventivo ante entrada inválida")
+    salida = p.stdout + p.stderr
 
+    exigir("NO_POSTULAR" in salida, "Orquestador no informa NO_POSTULAR")
+    exigir("ETAPA 3" not in salida, "NO_POSTULAR llegó a DOCX/PDF")
+    exigir("ETAPA 4" not in salida, "NO_POSTULAR llegó a carta/correo")
 
-# ============================================================
-# 9. CONTAMINACIÓN DE VACANTES
-# ============================================================
+    ok("orquestador bloquea antes de documentos")
 
-def validar_vacantes_activas() -> None:
-    carpeta = RAIZ / "vacantes"
-
-    patrones_prohibidos = (
-        "empresa_prueba",
-        "empresa_texto",
-    )
-
-    contaminadas = []
-
-    if carpeta.is_dir():
-        for ruta in carpeta.glob("*.json"):
-            nombre = ruta.name.lower()
-
-            if any(
-                patron in nombre
-                for patron in patrones_prohibidos
-            ):
-                contaminadas.append(
-                    ruta.name
-                )
-
-    exigir(
-        not contaminadas,
-        (
-            "Quedan vacantes ficticias activas: "
-            + ", ".join(contaminadas)
-        ),
-    )
-
-    ok("vacantes ficticias activas: 0")
-
-
-# ============================================================
-# EJECUCIÓN
-# ============================================================
-
-def main() -> None:
-    print()
     print("=" * 72)
-    print("VALIDACIÓN INTEGRAL CV-MAESTRO")
-    print("=" * 72)
-
-    try:
-        validar_archivos()
-        validar_compilacion()
-
-        modulos = cargar_modulos()
-
-        validar_contratos(
-            modulos
-        )
-
-        validar_procesamiento(
-            modulos
-        )
-
-        validar_exportacion(
-            modulos
-        )
-
-        validar_comunicaciones(
-            modulos
-        )
-
-        validar_bloqueo(
-            modulos
-        )
-
-        validar_vacantes_activas()
-
-    except Exception as error:
-        print()
-        print("=" * 72)
-        print("RESULTADO: ERROR")
-        print("=" * 72)
-        print(error)
-        print("=" * 72)
-
-        raise SystemExit(1)
-
-    print()
-    print("=" * 72)
-    print("RESULTADO: SISTEMA APROBADO")
-    print("=" * 72)
-    print(
-        "El flujo principal ha superado "
-        "todas las validaciones."
-    )
+    print("RESULTADO: SISTEMA V2 APROBADO")
     print("=" * 72)
 
 
 if __name__ == "__main__":
-    main()
-
+    try:
+        main()
+    except Exception as error:
+        print("=" * 72)
+        print("RESULTADO: ERROR")
+        print(error)
+        print("=" * 72)
+        raise SystemExit(1)

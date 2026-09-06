@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from motor_decision import (
+    CandidaturaNoApta,
+    evaluar_decision,
+)
+
 """
 GENERADOR DE CV ESPECIFICO POR VACANTE - V2.1
 Proyecto: cv-maestro
@@ -1107,6 +1112,19 @@ def construir_cv(
     analisis = analizar_vacante(
         vacante
     )
+
+    decision = evaluar_decision(
+        analisis
+    )
+
+    if not decision.get(
+        "apto_para_generar",
+        False,
+    ):
+        raise CandidaturaNoApta(
+            decision,
+            analisis,
+        )
 
     modulo = analisis.get(
         "modulo",

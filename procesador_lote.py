@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from motor_decision import CandidaturaNoApta
+
 """
 PROCESADOR DE VACANTES POR LOTE
 Proyecto: cv-maestro
@@ -269,6 +271,62 @@ def procesar_una(
                 if ruta_cv
                 else "BLOQUEADA"
             ),
+        }
+
+    except CandidaturaNoApta as decision_error:
+        decision = decision_error.decision
+        analisis = decision_error.analisis
+
+        brechas = analisis.get(
+            "brechas",
+            [],
+        )
+
+        if not isinstance(brechas, list):
+            brechas = []
+
+        return {
+            "archivo": str(archivo),
+            "titulo": vacante.get(
+                "titulo",
+                "",
+            ),
+            "empresa": vacante.get(
+                "empresa",
+                "",
+            ),
+            "modulo": analisis.get(
+                "modulo",
+                "",
+            ),
+            "adecuacion_documental": decision.get(
+                "adecuacion_ponderada",
+                0.0,
+            ),
+            "adecuacion_ponderada": decision.get(
+                "adecuacion_ponderada",
+                0.0,
+            ),
+            "numero_brechas": len(brechas),
+            "auditoria": "NO_EJECUTADA",
+            "incidencias": list(
+                decision.get(
+                    "motivos",
+                    [],
+                )
+            ),
+            "cv_generado": None,
+            "control_generado": None,
+            "estado": "NO_POSTULAR",
+            "iap": decision.get(
+                "iap",
+                0.0,
+            ),
+            "umbral_iap": decision.get(
+                "umbral_iap",
+                70.0,
+            ),
+            "decision": decision,
         }
 
     except Exception as error:
