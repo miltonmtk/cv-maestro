@@ -27,10 +27,10 @@ import re
 import unicodedata
 
 from app import CV_MAESTRO, generar_perfil
-from vacante_segurcaixa import VACANTE_SEGURCAIXA
+from cargador_vacantes import cargar_vacante
 
 
-VACANTE_ACTUAL = VACANTE_SEGURCAIXA
+VACANTE_ACTUAL = cargar_vacante()
 
 
 # ============================================================
