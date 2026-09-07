@@ -51,7 +51,7 @@ CARPETA_SALIDA = Path("salidas")
 
 MAX_EXPERIENCIAS = 3
 MAX_FORMACION = 4
-MAX_COMPETENCIAS = 8
+MAX_COMPETENCIAS = 6
 MAX_FUNCIONES_POR_EXPERIENCIA = 4
 
 
@@ -1071,13 +1071,13 @@ def construir_perfil_profesional(
 
     fortalezas = unicos(
         fortalezas
-    )[:4]
+    )[:3]
 
     if base and fortalezas:
 
         return (
             f"{base}. "
-            "Experiencia relacionada con "
+            "Experiencia en "
             + ", ".join(
                 fortalezas
             )
@@ -1091,7 +1091,7 @@ def construir_perfil_profesional(
 
         return (
             "Profesional con experiencia "
-            "relacionada con "
+            "en "
             + ", ".join(
                 fortalezas
             )

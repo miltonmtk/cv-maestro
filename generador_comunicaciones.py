@@ -131,7 +131,7 @@ def obtener_fortalezas(
 def obtener_experiencias_clave(
     cv: Dict[str, Any],
     maximo: int = 2,
-) -> list[str]:
+) -> list[Dict[str, str]]:
 
     resultados = []
 
@@ -146,18 +146,22 @@ def obtener_experiencias_clave(
         ):
             continue
 
-        cargo = campo(
-            experiencia,
-            "cargo",
-            "puesto",
+        cargo = limpiar(
+            campo(
+                experiencia,
+                "cargo",
+                "puesto",
+            )
         )
 
-        organizacion = campo(
-            experiencia,
-            "organizacion",
-            "organización",
-            "empresa",
-            "institucion",
+        organizacion = limpiar(
+            campo(
+                experiencia,
+                "organizacion",
+                "organización",
+                "empresa",
+                "institucion",
+            )
         )
 
         funciones = experiencia.get(
@@ -165,49 +169,68 @@ def obtener_experiencias_clave(
             [],
         )
 
-        partes = []
-
-        if cargo:
-            partes.append(
-                cargo
-            )
-
-        if organizacion:
-            partes.append(
-                organizacion
-            )
-
-        encabezado = " en ".join(
-            partes
-        )
+        funcion = ""
 
         if funciones:
-
             funcion = limpiar(
                 funciones[0]
+            ).rstrip(" .")
+
+        if not any(
+            (
+                cargo,
+                organizacion,
+                funcion,
             )
-
-            if encabezado:
-                texto = (f"{organizacion}: {funcion.rstrip(' .')}" if organizacion else f"{cargo}: {funcion.rstrip(' .')}")
-
-            else:
-                texto = funcion
-
-        else:
-            texto = encabezado
-
-        if texto:
-            resultados.append(
-                texto
-            )
-
-        if (
-            len(resultados)
-            >= maximo
         ):
+            continue
+
+        resultados.append(
+            {
+                "cargo": cargo,
+                "organizacion": organizacion,
+                "funcion": funcion,
+            }
+        )
+
+        if len(resultados) >= maximo:
             break
 
     return resultados
+
+
+def redactar_experiencia(
+    experiencia: Dict[str, str],
+) -> str:
+
+    cargo = limpiar(
+        experiencia.get("cargo", "")
+    )
+
+    organizacion = limpiar(
+        experiencia.get(
+            "organizacion",
+            "",
+        )
+    )
+
+    funcion = limpiar(
+        experiencia.get("funcion", "")
+    ).rstrip(" .")
+
+    referencia = ""
+
+    if cargo and organizacion:
+        referencia = f"{cargo} en {organizacion}"
+    elif cargo:
+        referencia = cargo
+    elif organizacion:
+        referencia = organizacion
+
+    if referencia and funcion:
+        return f"{referencia}: {funcion}"
+
+    return referencia or funcion
 
 
 # ============================================================
@@ -254,7 +277,7 @@ def generar_carta(
 
     fortalezas = obtener_fortalezas(
         cv,
-        maximo=4,
+        maximo=3,
     )
 
     experiencias = obtener_experiencias_clave(
@@ -289,33 +312,36 @@ def generar_carta(
     ]
 
     if fortalezas:
-
         lineas.extend(
             [
                 "",
                 (
-                    "Mi formación y experiencia se relacionan "
-                    "especialmente con "
+                    "Mi perfil combina experiencia en "
                     + ", ".join(fortalezas)
                     + "."
                 ),
             ]
         )
 
-    if experiencias:
+    textos_experiencia = [
+        redactar_experiencia(experiencia)
+        for experiencia in experiencias
+    ]
 
-        texto_experiencias = "; ".join(
-            experiencia.rstrip(" .;")
-            for experiencia in experiencias
-        )
+    textos_experiencia = [
+        texto
+        for texto in textos_experiencia
+        if texto
+    ]
 
+    if textos_experiencia:
         lineas.extend(
             [
                 "",
                 (
-                    "Dentro de mi trayectoria profesional "
-                    "destacan "
-                    + texto_experiencias
+                    "Entre las experiencias más relevantes "
+                    "para esta posición se encuentran "
+                    + "; ".join(textos_experiencia)
                     + "."
                 ),
             ]
@@ -323,12 +349,6 @@ def generar_carta(
 
     lineas.extend(
         [
-            "",
-            (
-                "Considero que esta combinación de formación "
-                    "y experiencia puede aportar valor a las "
-                    "funciones asociadas a la posición."
-            ),
             "",
             (
                 "Adjunto mi currículum para su valoración "
@@ -387,6 +407,11 @@ def generar_correo(
         maximo=3,
     )
 
+    experiencias = obtener_experiencias_clave(
+        cv,
+        maximo=1,
+    )
+
     asunto = (
         f"Candidatura – {titulo} – {nombre}"
     )
@@ -406,18 +431,33 @@ def generar_correo(
     ]
 
     if fortalezas:
-
         cuerpo.extend(
             [
                 "",
                 (
-                    "Mi perfil cuenta con formación y "
-                    "experiencia relacionadas con "
+                    "Mi perfil combina experiencia en "
                     + ", ".join(fortalezas)
                     + "."
                 ),
             ]
         )
+
+    if experiencias:
+        texto_experiencia = redactar_experiencia(
+            experiencias[0]
+        )
+
+        if texto_experiencia:
+            cuerpo.extend(
+                [
+                    "",
+                    (
+                        "Como referencia de experiencia relevante, "
+                        + texto_experiencia
+                        + "."
+                    ),
+                ]
+            )
 
     cuerpo.extend(
         [
