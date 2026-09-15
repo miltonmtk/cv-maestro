@@ -1,0 +1,50 @@
+{
+  "titulo": "Técnico/a de Formación AUDITORIA_CALIDAD",
+  "empresa": "Validacion AUDITORIA_CALIDAD",
+  "ubicacion": "Madrid",
+  "url": "",
+  "requisitos": [
+    {
+      "nombre": "Titulación relacionada con educación o pedagogía",
+      "tipo": "obligatorio",
+      "peso": 5,
+      "palabras_clave": [
+        "licenciatura",
+        "educación",
+        "pedagogía",
+        "procesos pedagógicos"
+      ]
+    },
+    {
+      "nombre": "Experiencia en gestión de formación",
+      "tipo": "obligatorio",
+      "peso": 5,
+      "palabras_clave": [
+        "formación profesional",
+        "formación de docentes",
+        "procesos formativos",
+        "capacitación de instructores"
+      ]
+    },
+    {
+      "nombre": "Diseño de procesos formativos",
+      "tipo": "obligatorio",
+      "peso": 4,
+      "palabras_clave": [
+        "diseño curricular",
+        "guías de aprendizaje",
+        "instrumentos de evaluación"
+      ]
+    },
+    {
+      "nombre": "Competencias pedagógicas",
+      "tipo": "deseable",
+      "peso": 3,
+      "palabras_clave": [
+        "pedagogía",
+        "estrategias didácticas",
+        "evaluación formativa"
+      ]
+    }
+  ]
+}

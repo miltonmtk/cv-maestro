@@ -26,7 +26,7 @@ from typing import Any, Dict, Iterable, List, Sequence
 import re
 import unicodedata
 
-from app import CV_MAESTRO, generar_perfil
+from perfil_maestro import resolver_perfil
 from cargador_vacantes import cargar_vacante
 
 
@@ -484,71 +484,32 @@ def detectar_brechas(
 
 def analizar_vacante(
     vacante: Dict[str, Any],
+    perfil_maestro: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
+    perfil = resolver_perfil(perfil=perfil_maestro)
+    corpus = construir_corpus(perfil)
 
-    corpus = construir_corpus(
-        CV_MAESTRO
-    )
-
-    modulo = seleccionar_modulo_para_vacante(
-        vacante
-    )
-
-    perfil_modular = generar_perfil(
-        modulo
-    )
-
-    experiencias_modulo = []
-
-    if isinstance(perfil_modular, dict):
-        experiencias_modulo = (
-            perfil_modular.get(
-                "experiencia",
-                [],
-            )
-            or []
-        )
+    modulo = seleccionar_modulo_para_vacante(vacante)
 
     resultados = [
-        evaluar_requisito(
-            requisito,
-            corpus,
-        )
-        for requisito in vacante.get(
-            "requisitos",
-            [],
-        )
+        evaluar_requisito(requisito, corpus)
+        for requisito in vacante.get("requisitos", [])
     ]
 
-    adecuacion = calcular_adecuacion(
-        resultados
-    )
+    adecuacion = calcular_adecuacion(resultados)
+    brechas = detectar_brechas(resultados)
 
-    brechas = detectar_brechas(
-        resultados
-    )
+    experiencias = perfil.get("experiencia", [])
+    if not isinstance(experiencias, list):
+        experiencias = []
 
     return {
-        "vacante": vacante.get(
-            "titulo",
-            "",
-        ),
-        "empresa": vacante.get(
-            "empresa",
-            "",
-        ),
-        "ubicacion": vacante.get(
-            "ubicacion",
-            "",
-        ),
-        "url": vacante.get(
-            "url",
-            "",
-        ),
+        "vacante": vacante.get("titulo", ""),
+        "empresa": vacante.get("empresa", ""),
+        "ubicacion": vacante.get("ubicacion", ""),
+        "url": vacante.get("url", ""),
         "modulo": modulo,
-        "experiencias_modulo": len(
-            experiencias_modulo
-        ),
+        "experiencias_modulo": len(experiencias),
         "adecuacion": adecuacion,
         "resultados": resultados,
         "brechas": brechas,

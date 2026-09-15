@@ -25,7 +25,7 @@ Reglas:
 import subprocess
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Dict, Sequence
 
 
 RAIZ = Path(__file__).resolve().parent
@@ -132,6 +132,11 @@ from exportador_final_lote import (
 
 from generador_comunicaciones import (
     procesar_vacante as procesar_comunicaciones,
+)
+
+from perfil_maestro import (
+    PerfilMaestroError,
+    resolver_perfil,
 )
 
 
@@ -289,6 +294,7 @@ def incidencias_texto(
 
 def ejecutar_procesamiento(
     ruta_vacante: Path,
+    perfil_maestro: Dict[str, Any],
 ) -> dict:
     etapa(
         2,
@@ -296,7 +302,8 @@ def ejecutar_procesamiento(
     )
 
     resultado = procesar_una(
-        ruta_vacante
+        ruta_vacante,
+        perfil_maestro,
     )
 
     estado = resultado.get(
@@ -365,6 +372,7 @@ def ejecutar_procesamiento(
 def ejecutar_exportacion(
     ruta_vacante: Path,
     ruta_foto: Path | None,
+    perfil_maestro: Dict[str, Any],
 ) -> dict:
     etapa(
         3,
@@ -374,6 +382,7 @@ def ejecutar_exportacion(
     resultado = exportar_vacante(
         ruta_vacante,
         ruta_foto,
+        perfil_maestro,
     )
 
     estado = resultado.get(
@@ -425,6 +434,7 @@ def ejecutar_exportacion(
 
 def ejecutar_comunicaciones(
     ruta_vacante: Path,
+    perfil_maestro: Dict[str, Any],
 ) -> dict:
     etapa(
         4,
@@ -432,7 +442,8 @@ def ejecutar_comunicaciones(
     )
 
     resultado = procesar_comunicaciones(
-        ruta_vacante
+        ruta_vacante,
+        perfil_maestro,
     )
 
     estado = resultado.get(
@@ -501,9 +512,21 @@ def ejecutar_candidatura(
         argumentos.foto
     )
 
+    try:
+        perfil_maestro = resolver_perfil(
+            ruta=argumentos.perfil
+            if argumentos.perfil
+            else None
+        )
+    except PerfilMaestroError as error:
+        raise OrquestadorError(
+            str(error)
+        ) from error
+
     resultado_proceso = (
         ejecutar_procesamiento(
-            ruta_vacante
+            ruta_vacante,
+            perfil_maestro,
         )
     )
 
@@ -511,12 +534,14 @@ def ejecutar_candidatura(
         ejecutar_exportacion(
             ruta_vacante,
             ruta_foto,
+            perfil_maestro,
         )
     )
 
     resultado_comunicaciones = (
         ejecutar_comunicaciones(
-            ruta_vacante
+            ruta_vacante,
+            perfil_maestro,
         )
     )
 
@@ -630,6 +655,14 @@ def leer_argumentos_orquestador() -> argparse.Namespace:
         help=(
             "Fotografía PNG/JPG/JPEG. "
             "Si se omite, genera CV sin foto."
+        ),
+    )
+
+    parser.add_argument(
+        "--perfil",
+        help=(
+            "Archivo JSON del Perfil Maestro. "
+            "Si se omite, usa el perfil predeterminado externo."
         ),
     )
 

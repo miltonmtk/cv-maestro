@@ -334,6 +334,7 @@ def nombre_base(
 def procesar_vacante(
     archivo: Path,
     ruta_foto: Optional[Path],
+    perfil_maestro: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
 
     vacante = cargar_vacante(
@@ -341,7 +342,8 @@ def procesar_vacante(
     )
 
     cv = construir_cv(
-        vacante
+        vacante,
+        perfil_maestro,
     )
 
     texto_cv = renderizar_cv(
@@ -351,6 +353,7 @@ def procesar_vacante(
     auditoria = auditar_cv(
         cv,
         texto_cv,
+        perfil_maestro,
     )
 
     if (

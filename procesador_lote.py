@@ -179,6 +179,7 @@ def guardar_candidatura(
 
 def procesar_una(
     archivo: Path,
+    perfil_maestro: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
 
     try:
@@ -187,7 +188,8 @@ def procesar_una(
         )
 
         cv = construir_cv(
-            vacante
+            vacante,
+            perfil_maestro,
         )
 
         texto_cv = renderizar_cv(
@@ -197,6 +199,7 @@ def procesar_una(
         auditoria = auditar_cv(
             cv,
             texto_cv,
+            perfil_maestro,
         )
 
         (

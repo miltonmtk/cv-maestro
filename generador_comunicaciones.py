@@ -571,6 +571,7 @@ def guardar_comunicaciones(
 
 def procesar_vacante(
     archivo: Path,
+    perfil_maestro: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
 
     try:
@@ -580,7 +581,8 @@ def procesar_vacante(
         )
 
         cv = construir_cv(
-            vacante
+            vacante,
+            perfil_maestro,
         )
 
         texto_cv = renderizar_cv(
@@ -590,6 +592,7 @@ def procesar_vacante(
         auditoria = auditar_cv(
             cv,
             texto_cv,
+            perfil_maestro,
         )
 
         if (

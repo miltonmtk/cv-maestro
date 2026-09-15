@@ -11,7 +11,7 @@ Proyecto: cv-maestro
 
 PRINCIPIOS
 
-1. La unica fuente profesional es CV_MAESTRO.
+1. La unica fuente profesional es el Perfil Maestro validado.
 2. Nunca se utiliza otro CV adaptado como fuente.
 3. Cada vacante genera un CV nuevo e independiente.
 4. El perfilador determina:
@@ -36,7 +36,7 @@ import json
 import re
 import unicodedata
 
-from app import CV_MAESTRO, generar_perfil
+from perfil_maestro import resolver_perfil
 from perfilador_vacantes import (
     VACANTE_ACTUAL,
     analizar_vacante,
@@ -257,64 +257,33 @@ def como_lista(
 # ============================================================
 
 def obtener_identidad(
-    perfil_modular: Dict[str, Any],
+    perfil_maestro: Dict[str, Any],
 ) -> Dict[str, str]:
 
-    datos = perfil_modular.get(
+    datos = perfil_maestro.get(
         "datos_personales",
         {},
     )
 
-    if not isinstance(
-        datos,
-        dict,
-    ):
+    if not isinstance(datos, dict):
         datos = {}
 
-    maestro_datos = CV_MAESTRO.get(
-        "datos_personales",
-        {},
-    )
-
-    if not isinstance(
-        maestro_datos,
-        dict,
-    ):
-        maestro_datos = {}
-
-    def buscar(
-        *claves: str,
-    ) -> str:
-
+    def buscar(*claves: str) -> str:
         objetivos = {
             normalizar(clave)
             for clave in claves
         }
 
-        for fuente in (
-            datos,
-            maestro_datos,
-            CV_MAESTRO,
-        ):
-
-            if not isinstance(
-                fuente,
-                dict,
+        for clave, valor in datos.items():
+            if (
+                normalizar(clave) in objetivos
+                and isinstance(
+                    valor,
+                    (str, int, float),
+                )
+                and limpiar(valor)
             ):
-                continue
-
-            for clave, valor in fuente.items():
-
-                if (
-                    normalizar(clave)
-                    in objetivos
-                    and isinstance(
-                        valor,
-                        (str, int, float),
-                    )
-                    and limpiar(valor)
-                ):
-                    return limpiar(valor)
+                return limpiar(valor)
 
         return ""
 
@@ -324,27 +293,23 @@ def obtener_identidad(
             "nombre_completo",
             "nombre completo",
         ),
-
         "ubicacion": buscar(
             "ubicacion",
             "ubicación",
             "ciudad",
             "residencia",
         ),
-
         "telefono": buscar(
             "telefono",
             "teléfono",
             "movil",
             "móvil",
         ),
-
         "email": buscar(
             "email",
             "correo",
             "correo electronico",
         ),
-
         "linkedin": buscar(
             "linkedin",
             "linkedin_url",
@@ -1107,10 +1072,16 @@ def construir_perfil_profesional(
 
 def construir_cv(
     vacante: Dict[str, Any],
+    perfil_maestro: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
 
+    perfil = resolver_perfil(
+        perfil=perfil_maestro
+    )
+
     analisis = analizar_vacante(
-        vacante
+        vacante,
+        perfil,
     )
 
     decision = evaluar_decision(
@@ -1130,19 +1101,6 @@ def construir_cv(
         "modulo",
         "HIBRIDO",
     )
-
-    perfil = generar_perfil(
-        modulo
-    )
-
-    if not isinstance(
-        perfil,
-        dict,
-    ):
-        raise TypeError(
-            "generar_perfil() debe devolver "
-            "un diccionario."
-        )
 
     (
         directos,
@@ -1193,7 +1151,7 @@ def construir_cv(
                     timespec="seconds"
                 )
             ),
-            "fuente": "CV_MAESTRO",
+            "fuente": "PERFIL_MAESTRO",
             "modulo": modulo,
         },
 
@@ -1581,6 +1539,7 @@ def renderizar_cv(
 def auditar_cv(
     cv: Dict[str, Any],
     texto_cv: str,
+    perfil_maestro: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
 
     incidencias: List[str] = []
@@ -1592,7 +1551,7 @@ def auditar_cv(
         ).get(
             "fuente"
         )
-        != "CV_MAESTRO"
+        != "PERFIL_MAESTRO"
     ):
         incidencias.append(
             "Fuente profesional invalida."
@@ -1625,11 +1584,15 @@ def auditar_cv(
                 + termino
             )
 
-    # Comprobacion basica de existencia
-    # de las experiencias en el CV Maestro.
+    # Comprobación contra la misma fuente profesional
+    # utilizada para construir la candidatura.
+    perfil_fuente = resolver_perfil(
+        perfil=perfil_maestro
+    )
+
     texto_maestro = normalizar(
         texto_objeto(
-            CV_MAESTRO
+            perfil_fuente
         )
     )
 
