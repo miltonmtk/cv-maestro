@@ -250,6 +250,18 @@ def procesar_una(
                     0.0,
                 )
             ),
+            "iap": control.get(
+                "iap",
+                0.0,
+            ),
+            "umbral_iap": control.get(
+                "umbral_iap",
+                70.0,
+            ),
+            "decision": control.get(
+                "decision",
+                {},
+            ),
             "numero_brechas": len(
                 brechas
             ),
