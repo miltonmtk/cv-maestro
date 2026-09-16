@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json
+import os
 from pathlib import Path
 
 import streamlit as st
@@ -14,11 +14,23 @@ from servicio_aplicacion import (
 )
 
 
+MOSTRAR_DETALLE_TECNICO = os.getenv("CV_MAESTRO_DEBUG") == "1"
+
 st.set_page_config(
     page_title="CV-MAESTRO",
     page_icon="📄",
     layout="wide",
 )
+
+
+def limpiar_sesion() -> None:
+    for clave in (
+        "ultimo_resultado",
+        "perfil_archivo",
+        "foto_archivo",
+        "vacante_archivo",
+    ):
+        st.session_state.pop(clave, None)
 
 
 def descargar_archivo(ruta: str | Path, etiqueta: str) -> None:
@@ -67,8 +79,9 @@ def mostrar_resultado(resultado: dict) -> None:
         if not carta and not correo:
             st.info("No se generaron comunicaciones.")
 
-    with st.expander("Detalle técnico"):
-        st.code(resultado.get("registro", ""), language="text")
+    if MOSTRAR_DETALLE_TECNICO:
+        with st.expander("Detalle técnico"):
+            st.code(resultado.get("registro", ""), language="text")
 
 
 st.title("CV-MAESTRO")
@@ -76,17 +89,29 @@ st.caption(
     "Analiza una vacante con un Perfil Maestro verificado y genera "
     "documentos de candidatura sin inventar información."
 )
+st.caption(
+    "Privacidad: los archivos cargados se procesan temporalmente. "
+    "Usa «Borrar datos de esta sesión» al terminar."
+)
 
 with st.sidebar:
     st.header("1. Perfil Maestro")
     perfil_archivo = st.file_uploader(
         "Carga el Perfil Maestro",
         type=["json"],
-        help="El archivo se procesa durante esta sesión.",
+        help="JSON: máximo 2 MB. Se procesa durante esta sesión.",
+        key="perfil_archivo",
     )
     foto_archivo = st.file_uploader(
         "Fotografía opcional",
         type=["png", "jpg", "jpeg"],
+        help="PNG o JPEG: máximo 10 MB.",
+        key="foto_archivo",
+    )
+    st.button(
+        "Borrar datos de esta sesión",
+        on_click=limpiar_sesion,
+        use_container_width=True,
     )
 
 st.header("2. Vacante")
@@ -103,16 +128,31 @@ if modo == "Archivo JSON":
     vacante_archivo = st.file_uploader(
         "Carga la vacante",
         type=["json"],
+        help="JSON: máximo 2 MB.",
+        key="vacante_archivo",
     )
 else:
     col_1, col_2 = st.columns(2)
-    titulo = col_1.text_input("Título de la vacante")
-    empresa = col_2.text_input("Empresa")
-    ubicacion = col_1.text_input("Ubicación")
-    url = col_2.text_input("Enlace de la oferta (opcional)")
+    titulo = col_1.text_input(
+        "Título de la vacante",
+        max_chars=300,
+    )
+    empresa = col_2.text_input(
+        "Empresa",
+        max_chars=300,
+    )
+    ubicacion = col_1.text_input(
+        "Ubicación",
+        max_chars=300,
+    )
+    url = col_2.text_input(
+        "Enlace de la oferta (opcional)",
+        max_chars=2048,
+    )
     texto = st.text_area(
         "Texto completo de la oferta",
         height=240,
+        max_chars=100_000,
     )
 
 st.header("3. Procesamiento")
@@ -175,8 +215,11 @@ if st.button(
 
     except (PerfilMaestroError, ServicioAplicacionError) as error:
         st.error(str(error))
-    except Exception as error:
-        st.error(f"Error inesperado controlado: {error}")
+    except Exception:
+        st.error(
+            "Ocurrió un error inesperado. "
+            "No se mostraron detalles internos por seguridad."
+        )
 
 if "ultimo_resultado" in st.session_state:
     mostrar_resultado(st.session_state["ultimo_resultado"])
