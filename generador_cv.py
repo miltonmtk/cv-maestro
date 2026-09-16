@@ -1203,6 +1203,17 @@ def construir_cv(
                     0.0,
                 )
             ),
+            "iap": decision.get(
+                "iap",
+                0.0,
+            ),
+            "umbral_iap": decision.get(
+                "umbral_iap",
+                70.0,
+            ),
+            "decision": deepcopy(
+                decision
+            ),
             "brechas": deepcopy(
                 analisis.get(
                     "brechas",
