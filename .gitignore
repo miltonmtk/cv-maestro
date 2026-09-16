@@ -2,8 +2,23 @@
 __pycache__/
 *.pyc
 
+# Entornos y credenciales
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
 # Salidas generadas
 salidas/
+
+# Perfiles y datos personales
+perfiles/*.json
+!perfiles/*.example.json
+
+# Archivos temporales de revisión
+revision_*.txt
+origen_*.txt
+instalacion.txt
 
 # Respaldos
 respaldos/
@@ -25,4 +40,3 @@ FOTO*.jpeg
 foto*.png
 foto*.jpg
 foto*.jpeg
-perfiles/perfil_actual.json
