@@ -167,7 +167,7 @@ else:
     url = col_2.text_input(
         "Enlace de la oferta (opcional)",
         max_chars=2048,
-        key=f"url_${version_carga}",
+        key=f"url_{version_carga}",
     )
     texto = st.text_area(
         "Texto completo de la oferta",
