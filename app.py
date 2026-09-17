@@ -24,13 +24,26 @@ st.set_page_config(
 
 
 def limpiar_sesion() -> None:
-    for clave in (
-        "ultimo_resultado",
+    prefijos_privados = (
         "perfil_archivo",
         "foto_archivo",
         "vacante_archivo",
-    ):
-        st.session_state.pop(clave, None)
+        "modo_",
+        "titulo_",
+        "empresa_",
+        "ubicacion_",
+        "url_",
+        "texto_",
+        "confirmacion_",
+    )
+
+    for clave in list(st.session_state):
+        if clave == "ultimo_resultado" or clave.startswith(prefijos_privados):
+            st.session_state.pop(clave, None)
+
+    st.session_state["version_carga"] = (
+        st.session_state.get("version_carga", 0) + 1
+    )
 
 
 def descargar_archivo(ruta: str | Path, etiqueta: str) -> None:
@@ -94,19 +107,21 @@ st.caption(
     "Usa «Borrar datos de esta sesión» al terminar."
 )
 
+version_carga = st.session_state.setdefault("version_carga", 0)
+
 with st.sidebar:
     st.header("1. Perfil Maestro")
     perfil_archivo = st.file_uploader(
         "Carga el Perfil Maestro",
         type=["json"],
         help="JSON: máximo 2 MB. Se procesa durante esta sesión.",
-        key="perfil_archivo",
+        key=f"perfil_archivo_{version_carga}",
     )
     foto_archivo = st.file_uploader(
         "Fotografía opcional",
         type=["png", "jpg", "jpeg"],
         help="PNG o JPEG: máximo 10 MB.",
-        key="foto_archivo",
+        key=f"foto_archivo_{version_carga}",
     )
     st.button(
         "Borrar datos de esta sesión",
@@ -119,6 +134,7 @@ modo = st.radio(
     "Forma de entrada",
     ("Archivo JSON", "Formulario"),
     horizontal=True,
+    key=f"modo_{version_carga}",
 )
 
 vacante_archivo = None
@@ -129,35 +145,41 @@ if modo == "Archivo JSON":
         "Carga la vacante",
         type=["json"],
         help="JSON: máximo 2 MB.",
-        key="vacante_archivo",
+        key=f"vacante_archivo_{version_carga}",
     )
 else:
     col_1, col_2 = st.columns(2)
     titulo = col_1.text_input(
         "Título de la vacante",
         max_chars=300,
+        key=f"titulo_{version_carga}",
     )
     empresa = col_2.text_input(
         "Empresa",
         max_chars=300,
+        key=f"empresa_{version_carga}",
     )
     ubicacion = col_1.text_input(
         "Ubicación",
         max_chars=300,
+        key=f"ubicacion_{version_carga}",
     )
     url = col_2.text_input(
         "Enlace de la oferta (opcional)",
         max_chars=2048,
+        key=f"url_${version_carga}",
     )
     texto = st.text_area(
         "Texto completo de la oferta",
         height=240,
         max_chars=100_000,
+        key=f"texto_{version_carga}",
     )
 
 st.header("3. Procesamiento")
 confirmacion = st.checkbox(
-    "Confirmo que revisaré la vigencia de la oferta antes de postular."
+    "Confirmo que revisaré la vigencia de la oferta antes de postular.",
+    key=f"confirmacion_{version_carga}",
 )
 
 if st.button(
