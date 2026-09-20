@@ -46,16 +46,16 @@ def limpiar_sesion() -> None:
     )
 
 
-def descargar_archivo(ruta: str | Path, etiqueta: str) -> None:
-    archivo = Path(ruta)
-    if archivo.is_file():
+def descargar_archivo(archivo: dict | None, etiqueta: str) -> None:
+    if archivo and archivo.get("contenido"):
+        nombre = archivo["nombre"]
         st.download_button(
             label=f"Descargar {etiqueta}",
-            data=archivo.read_bytes(),
-            file_name=archivo.name,
+            data=archivo["contenido"],
+            file_name=nombre,
             mime=(
                 "application/pdf"
-                if archivo.suffix.lower() == ".pdf"
+                if nombre.lower().endswith(".pdf")
                 else "application/vnd.openxmlformats-officedocument."
                 "wordprocessingml.document"
             ),
@@ -86,9 +86,9 @@ def mostrar_resultado(resultado: dict) -> None:
         carta = comunicaciones.get("carta")
         correo = comunicaciones.get("correo")
         if carta:
-            st.write(f"Carta: {carta}")
+            st.text_area("Carta", carta, height=200)
         if correo:
-            st.write(f"Correo: {correo}")
+            st.text_area("Correo", correo, height=200)
         if not carta and not correo:
             st.info("No se generaron comunicaciones.")
 
