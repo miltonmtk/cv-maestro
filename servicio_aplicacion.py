@@ -226,6 +226,20 @@ def procesar_candidatura(
                 check=False,
             )
             if ejecucion.returncode:
+                diagnostico = temporal_path / "diagnostico.json"
+                if diagnostico.is_file():
+                    detalle = json.loads(diagnostico.read_text(encoding="utf-8"))
+                    etapas = {
+                        "preparación", "análisis y auditoría",
+                        "generación de DOCX y PDF", "carta y correo",
+                        "preparación de descargas",
+                    }
+                    etapa = detalle.get("etapa")
+                    if etapa in etapas:
+                        raise ServicioAplicacionError(
+                            f"No fue posible completar la etapa: {etapa}. "
+                            f"Tipo de error: {str(detalle.get('tipo', 'Error'))[:60]}."
+                        )
                 raise ServicioAplicacionError("No fue posible completar la candidatura.")
 
             resultado = json.loads(
@@ -248,10 +262,12 @@ def procesar_candidatura(
                 if not ruta.is_relative_to(temporal_path.resolve()):
                     raise ServicioAplicacionError("Ruta de salida no válida.")
                 comunicaciones[clave] = ruta.read_text(encoding="utf-8")
+        except ServicioAplicacionError:
+            raise
         except Exception as error:
             raise ServicioAplicacionError(
-                "No fue posible completar la candidatura. "
-                "Revisa los archivos cargados y vuelve a intentarlo."
+                "No fue posible preparar las descargas. "
+                f"Tipo de error: {type(error).__name__}."
             ) from error
 
     return resultado
