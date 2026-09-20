@@ -13,6 +13,11 @@ def main() -> None:
     carpeta = Path.cwd()
     etapa = "preparación"
     try:
+        # El perfilador heredado carga vacante_actual.json al importarse.
+        # Se prepara dentro de la carpeta temporal de esta solicitud.
+        (carpeta / "vacante_actual.json").write_bytes(
+            (carpeta / "vacante.json").read_bytes()
+        )
         from orquestador_candidatura import (
             ejecutar_comunicaciones,
             ejecutar_exportacion,
