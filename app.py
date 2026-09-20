@@ -86,9 +86,11 @@ def mostrar_resultado(resultado: dict) -> None:
         carta = comunicaciones.get("carta")
         correo = comunicaciones.get("correo")
         if carta:
-            st.text_area("Carta", carta, height=200)
+            st.subheader("Carta")
+            st.code(carta, language="text")
         if correo:
-            st.text_area("Correo", correo, height=200)
+            st.subheader("Correo")
+            st.code(correo, language="text")
         if not carta and not correo:
             st.info("No se generaron comunicaciones.")
 
