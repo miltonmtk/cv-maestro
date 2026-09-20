@@ -6,7 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from servicio_aplicacion import procesar_candidatura
+from servicio_aplicacion import ServicioAplicacionError, procesar_candidatura
 
 
 class PersistenciaInterfazTest(unittest.TestCase):
@@ -43,6 +43,22 @@ class PersistenciaInterfazTest(unittest.TestCase):
         self.assertEqual(resultado["exportacion"]["pdf"]["contenido"], b"%PDF-prueba")
         self.assertEqual(resultado["comunicaciones"]["carta"], "Carta de prueba")
         self.assertFalse(carpetas[0].exists())
+
+    def test_fallo_trabajador_identifica_etapa_sin_filtrar_datos(self):
+        def trabajador_fallido(comando, *, cwd, **opciones):
+            (Path(cwd) / "diagnostico.json").write_text(
+                json.dumps({"etapa": "generación de DOCX y PDF", "tipo": "FileNotFoundError"}),
+                encoding="utf-8",
+            )
+            return SimpleNamespace(returncode=1, stderr="dato privado del perfil")
+
+        with patch("servicio_aplicacion.validar_perfil_o_fallar", return_value={"nombre": "Prueba"}), \
+             patch("servicio_aplicacion.validar_vacante"), \
+             patch("servicio_aplicacion.subprocess.run", side_effect=trabajador_fallido):
+            with self.assertRaisesRegex(ServicioAplicacionError, "generación de DOCX y PDF") as error:
+                procesar_candidatura({"nombre": "Prueba"}, {"titulo": "Puesto"})
+
+        self.assertNotIn("dato privado", str(error.exception))
 
 
 if __name__ == "__main__":
