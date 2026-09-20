@@ -1,19 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 import tempfile
-from contextlib import redirect_stdout
-from io import StringIO
 from pathlib import Path
 from typing import Any, Dict
 from urllib.parse import urlparse
 
 from cargador_vacantes import validar_vacante
-from orquestador_candidatura import (
-    ejecutar_comunicaciones,
-    ejecutar_exportacion,
-    ejecutar_procesamiento,
-)
 from perfil_maestro import validar_perfil_o_fallar
 
 
@@ -197,8 +193,6 @@ def procesar_candidatura(
             "La vacante no cumple la estructura requerida."
         ) from error
 
-    registro = StringIO()
-
     with tempfile.TemporaryDirectory(prefix="cv_maestro_") as temporal:
         temporal_path = Path(temporal)
         ruta_vacante = temporal_path / "vacante.json"
@@ -206,40 +200,58 @@ def procesar_candidatura(
             json.dumps(vacante, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+        (temporal_path / "perfil.json").write_text(
+            json.dumps(perfil_validado, ensure_ascii=False),
+            encoding="utf-8",
+        )
 
-        ruta_foto = None
         if fotografia:
             extension = validar_fotografia(
                 fotografia,
                 extension_fotografia,
             )
-            ruta_foto = temporal_path / f"fotografia{extension}"
-            ruta_foto.write_bytes(fotografia)
+            (temporal_path / f"fotografia{extension}").write_bytes(fotografia)
 
         try:
-            with redirect_stdout(registro):
-                proceso = ejecutar_procesamiento(
-                    ruta_vacante,
-                    perfil_validado,
-                )
-                exportacion = ejecutar_exportacion(
-                    ruta_vacante,
-                    ruta_foto,
-                    perfil_validado,
-                )
-                comunicaciones = ejecutar_comunicaciones(
-                    ruta_vacante,
-                    perfil_validado,
-                )
+            trabajador = Path(__file__).resolve().with_name("trabajador_interfaz.py")
+            entorno = os.environ.copy()
+            entorno.pop("CV_MAESTRO_DEBUG", None)
+            ejecucion = subprocess.run(
+                [sys.executable, str(trabajador)],
+                cwd=temporal_path,
+                env=entorno,
+                capture_output=True,
+                text=True,
+                timeout=180,
+                check=False,
+            )
+            if ejecucion.returncode:
+                raise ServicioAplicacionError("No fue posible completar la candidatura.")
+
+            resultado = json.loads(
+                (temporal_path / "resultado.json").read_text(encoding="utf-8")
+            )
+            exportacion = resultado["exportacion"]
+            comunicaciones = resultado["comunicaciones"]
+
+            for clave in ("docx", "pdf"):
+                ruta = (temporal_path / exportacion[clave]).resolve()
+                if not ruta.is_relative_to(temporal_path.resolve()):
+                    raise ServicioAplicacionError("Ruta de salida no válida.")
+                exportacion[clave] = {
+                    "nombre": ruta.name,
+                    "contenido": ruta.read_bytes(),
+                }
+
+            for clave in ("carta", "correo"):
+                ruta = (temporal_path / comunicaciones[clave]).resolve()
+                if not ruta.is_relative_to(temporal_path.resolve()):
+                    raise ServicioAplicacionError("Ruta de salida no válida.")
+                comunicaciones[clave] = ruta.read_text(encoding="utf-8")
         except Exception as error:
             raise ServicioAplicacionError(
                 "No fue posible completar la candidatura. "
                 "Revisa los archivos cargados y vuelve a intentarlo."
             ) from error
 
-    return {
-        "proceso": proceso,
-        "exportacion": exportacion,
-        "comunicaciones": comunicaciones,
-        "registro": registro.getvalue(),
-    }
+    return resultado
