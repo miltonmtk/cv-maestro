@@ -236,9 +236,24 @@ def procesar_candidatura(
                     }
                     etapa = detalle.get("etapa")
                     if etapa in etapas:
+                        archivo = detalle.get("archivo", "")
+                        linea = detalle.get("linea")
+                        ubicacion = ""
+                        if (
+                            isinstance(archivo, str)
+                            and archivo.replace("_", "").replace(".", "").isalnum()
+                            and isinstance(linea, int)
+                            and 0 < linea < 100_000
+                        ):
+                            ubicacion = f" Archivo: {archivo}, línea {linea}."
+                        modulo = detalle.get("modulo")
+                        dependencia = ""
+                        if isinstance(modulo, str) and modulo.replace("_", "").replace(".", "").isalnum():
+                            dependencia = f" Módulo: {modulo[:60]}."
                         raise ServicioAplicacionError(
                             f"No fue posible completar la etapa: {etapa}. "
                             f"Tipo de error: {str(detalle.get('tipo', 'Error'))[:60]}."
+                            f"{ubicacion}{dependencia}"
                         )
                 raise ServicioAplicacionError("No fue posible completar la candidatura.")
 
