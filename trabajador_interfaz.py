@@ -4,21 +4,21 @@ from __future__ import annotations
 
 import json
 import sys
+import traceback
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
-
-from orquestador_candidatura import (
-    ejecutar_comunicaciones,
-    ejecutar_exportacion,
-    ejecutar_procesamiento,
-)
-
 
 def main() -> None:
     carpeta = Path.cwd()
     etapa = "preparación"
     try:
+        from orquestador_candidatura import (
+            ejecutar_comunicaciones,
+            ejecutar_exportacion,
+            ejecutar_procesamiento,
+        )
+
         perfil = json.loads((carpeta / "perfil.json").read_text(encoding="utf-8"))
         vacante = carpeta / "vacante.json"
         fotografia = next(carpeta.glob("fotografia.*"), None)
@@ -48,8 +48,16 @@ def main() -> None:
     except Exception as error:
         # Solo se comunica la etapa y el tipo; el mensaje original puede contener
         # datos privados de la candidatura o rutas del equipo.
+        marco = traceback.extract_tb(error.__traceback__)[-1]
+        modulo = getattr(error, "name", None) if isinstance(error, ModuleNotFoundError) else None
         (carpeta / "diagnostico.json").write_text(
-            json.dumps({"etapa": etapa, "tipo": type(error).__name__}),
+            json.dumps({
+                "etapa": etapa,
+                "tipo": type(error).__name__,
+                "archivo": Path(marco.filename).name,
+                "linea": marco.lineno,
+                "modulo": modulo,
+            }),
             encoding="utf-8",
         )
         raise SystemExit(1) from None
