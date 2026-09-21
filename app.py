@@ -153,7 +153,7 @@ if origen_perfil == "Crear nuevo":
         "La información permanece en esta sesión hasta que la borres. "
         "Descarga el JSON para conservar tu propia copia."
     )
-    with st.form(f"crear_perfil_{version_carga}"):
+    with st.container(border=True):
         col_1, col_2 = st.columns(2)
         nombre = col_1.text_input("Nombre completo *", max_chars=200)
         ubicacion_perfil = col_2.text_input("Ubicación", max_chars=200)
@@ -235,10 +235,11 @@ if origen_perfil == "Crear nuevo":
             "Competencias, una por línea *",
             height=130,
         )
-        crear_perfil = st.form_submit_button(
+        crear_perfil = st.button(
             "Crear y validar Perfil Maestro",
             type="primary",
             use_container_width=True,
+            key=f"crear_perfil_{version_carga}",
         )
 
     if crear_perfil:
