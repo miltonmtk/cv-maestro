@@ -5,6 +5,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from constructor_perfil import construir_perfil_maestro, serializar_perfil
 from perfil_maestro import PerfilMaestroError, validar_perfil_o_fallar
 from servicio_aplicacion import (
     ServicioAplicacionError,
@@ -26,6 +27,8 @@ st.set_page_config(
 def limpiar_sesion() -> None:
     prefijos_privados = (
         "perfil_archivo",
+        "origen_perfil_",
+        "crear_",
         "foto_archivo",
         "vacante_archivo",
         "modo_",
@@ -38,7 +41,9 @@ def limpiar_sesion() -> None:
     )
 
     for clave in list(st.session_state):
-        if clave == "ultimo_resultado" or clave.startswith(prefijos_privados):
+        if clave in {"ultimo_resultado", "perfil_creado"} or clave.startswith(
+            prefijos_privados
+        ):
             st.session_state.pop(clave, None)
 
     st.session_state["version_carga"] = (
@@ -113,12 +118,21 @@ version_carga = st.session_state.setdefault("version_carga", 0)
 
 with st.sidebar:
     st.header("1. Perfil Maestro")
-    perfil_archivo = st.file_uploader(
-        "Carga el Perfil Maestro",
-        type=["json"],
-        help="JSON: máximo 2 MB. Se procesa durante esta sesión.",
-        key=f"perfil_archivo_{version_carga}",
+    origen_perfil = st.radio(
+        "Forma de entrada",
+        ("Cargar JSON", "Crear nuevo"),
+        key=f"origen_perfil_{version_carga}",
     )
+    perfil_archivo = None
+    if origen_perfil == "Cargar JSON":
+        perfil_archivo = st.file_uploader(
+            "Carga el Perfil Maestro",
+            type=["json"],
+            help="JSON: máximo 2 MB. Se procesa durante esta sesión.",
+            key=f"perfil_archivo_{version_carga}",
+        )
+    else:
+        st.info("Completa el formulario principal y descarga tu copia.")
     foto_archivo = st.file_uploader(
         "Fotografía opcional",
         type=["png", "jpg", "jpeg"],
@@ -130,6 +144,133 @@ with st.sidebar:
         on_click=limpiar_sesion,
         use_container_width=True,
     )
+
+perfil_creado = st.session_state.get("perfil_creado")
+
+if origen_perfil == "Crear nuevo":
+    st.header("1. Crear Perfil Maestro")
+    st.caption(
+        "La información permanece en esta sesión hasta que la borres. "
+        "Descarga el JSON para conservar tu propia copia."
+    )
+    with st.form(f"crear_perfil_{version_carga}"):
+        col_1, col_2 = st.columns(2)
+        nombre = col_1.text_input("Nombre completo *", max_chars=200)
+        ubicacion_perfil = col_2.text_input("Ubicación", max_chars=200)
+        telefono = col_1.text_input("Teléfono", max_chars=100)
+        email = col_2.text_input("Correo electrónico", max_chars=320)
+        linkedin = st.text_input("LinkedIn", max_chars=2048)
+        perfil_profesional = st.text_area(
+            "Perfil profesional *",
+            height=130,
+            max_chars=5_000,
+        )
+
+        st.subheader("Formación")
+        cantidad_formacion = st.number_input(
+            "Número de estudios",
+            min_value=1,
+            max_value=10,
+            value=1,
+            step=1,
+        )
+        formacion = []
+        for indice in range(int(cantidad_formacion)):
+            st.markdown(f"**Estudio {indice + 1}**")
+            columnas = st.columns(3)
+            formacion.append(
+                {
+                    "titulo": columnas[0].text_input(
+                        "Título *",
+                        key=f"crear_formacion_titulo_{version_carga}_{indice}",
+                    ),
+                    "institucion": columnas[1].text_input(
+                        "Institución *",
+                        key=f"crear_formacion_institucion_{version_carga}_{indice}",
+                    ),
+                    "periodo": columnas[2].text_input(
+                        "Periodo",
+                        key=f"crear_formacion_periodo_{version_carga}_{indice}",
+                    ),
+                }
+            )
+
+        st.subheader("Experiencia")
+        cantidad_experiencia = st.number_input(
+            "Número de experiencias",
+            min_value=1,
+            max_value=15,
+            value=1,
+            step=1,
+        )
+        experiencia = []
+        for indice in range(int(cantidad_experiencia)):
+            st.markdown(f"**Experiencia {indice + 1}**")
+            columnas = st.columns(3)
+            registro = {
+                "organizacion": columnas[0].text_input(
+                    "Organización *",
+                    key=f"crear_experiencia_organizacion_{version_carga}_{indice}",
+                ),
+                "cargo": columnas[1].text_input(
+                    "Cargo *",
+                    key=f"crear_experiencia_cargo_{version_carga}_{indice}",
+                ),
+                "periodo": columnas[2].text_input(
+                    "Periodo *",
+                    key=f"crear_experiencia_periodo_{version_carga}_{indice}",
+                ),
+                "area": st.text_input(
+                    "Áreas, separadas por comas",
+                    key=f"crear_experiencia_area_{version_carga}_{indice}",
+                ),
+                "funciones": st.text_area(
+                    "Funciones, una por línea",
+                    key=f"crear_experiencia_funciones_{version_carga}_{indice}",
+                ),
+            }
+            experiencia.append(registro)
+
+        competencias = st.text_area(
+            "Competencias, una por línea *",
+            height=130,
+        )
+        crear_perfil = st.form_submit_button(
+            "Crear y validar Perfil Maestro",
+            type="primary",
+            use_container_width=True,
+        )
+
+    if crear_perfil:
+        try:
+            if not perfil_profesional.strip():
+                raise PerfilMaestroError("Falta el perfil profesional.")
+            if not competencias.strip():
+                raise PerfilMaestroError("Faltan las competencias.")
+            perfil_creado = construir_perfil_maestro(
+                nombre=nombre,
+                ubicacion=ubicacion_perfil,
+                telefono=telefono,
+                email=email,
+                linkedin=linkedin,
+                perfil_profesional=perfil_profesional,
+                formacion=formacion,
+                experiencia=experiencia,
+                competencias=competencias,
+            )
+            st.session_state["perfil_creado"] = perfil_creado
+            st.success("Perfil Maestro creado y validado.")
+        except PerfilMaestroError as error:
+            st.error(str(error))
+
+    if perfil_creado:
+        st.download_button(
+            "Descargar mi Perfil Maestro JSON",
+            data=serializar_perfil(perfil_creado),
+            file_name="perfil_maestro.json",
+            mime="application/json",
+            use_container_width=True,
+        )
 
 st.header("2. Vacante")
 modo = st.radio(
@@ -191,15 +332,21 @@ if st.button(
     use_container_width=True,
 ):
     try:
-        if perfil_archivo is None:
-            raise ServicioAplicacionError(
-                "Debes cargar un Perfil Maestro JSON."
+        if origen_perfil == "Crear nuevo":
+            if perfil_creado is None:
+                raise ServicioAplicacionError(
+                    "Primero crea y valida el Perfil Maestro."
+                )
+            perfil = perfil_creado
+        else:
+            if perfil_archivo is None:
+                raise ServicioAplicacionError(
+                    "Debes cargar un Perfil Maestro JSON."
+                )
+            perfil = leer_json_bytes(
+                perfil_archivo.getvalue(),
+                "El Perfil Maestro",
             )
-
-        perfil = leer_json_bytes(
-            perfil_archivo.getvalue(),
-            "El Perfil Maestro",
-        )
         validar_perfil_o_fallar(perfil)
 
         if modo == "Archivo JSON":
