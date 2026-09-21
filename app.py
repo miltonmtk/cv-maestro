@@ -272,6 +272,12 @@ if origen_perfil == "Crear nuevo":
             use_container_width=True,
         )
 
+    # No mostrar la vacante antes de que el Perfil Maestro esté listo.
+    # Además de guiar el flujo, evita que el siguiente encabezado aparezca
+    # visualmente antes de los controles contenidos en el formulario.
+    if perfil_creado is None:
+        st.stop()
+
 st.header("2. Vacante")
 modo = st.radio(
     "Forma de entrada",
