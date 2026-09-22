@@ -279,7 +279,10 @@ if origen_perfil == "Crear nuevo":
     if perfil_creado is None:
         st.stop()
 
-st.header("2. Vacante")
+if origen_perfil == "Crear nuevo" and perfil_creado is None:
+    st.header("1. Crear Perfil Maestro")
+else:
+    st.header("2. Vacante")
 modo = st.radio(
     "Forma de entrada",
     ("Archivo JSON", "Formulario"),
