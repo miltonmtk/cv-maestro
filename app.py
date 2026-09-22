@@ -155,8 +155,10 @@ perfil_creado_listo = bool(st.session_state.get("perfil_creado_listo"))
 if origen_perfil == "Crear nuevo" and not perfil_creado_listo:
     perfil_creado = None
 
+st.header("1. Perfil Maestro")
+
 if origen_perfil == "Crear nuevo":
-    st.header("1. Crear Perfil Maestro")
+    st.subheader("Crear nuevo")
     st.caption(
         "La información permanece en esta sesión hasta que la borres. "
         "Descarga el JSON para conservar tu propia copia."
@@ -283,134 +285,138 @@ if origen_perfil == "Crear nuevo":
             use_container_width=True,
         )
 
-    # No mostrar la vacante antes de que el Perfil Maestro esté listo.
-    # Además de guiar el flujo, evita que el siguiente encabezado aparezca
-    # visualmente antes de los controles contenidos en el formulario.
-    if not perfil_creado_listo:
-        st.stop()
+perfil_disponible = (
+    perfil_creado_listo
+    if origen_perfil == "Crear nuevo"
+    else perfil_archivo is not None
+)
 
-if origen_perfil == "Crear nuevo" and not perfil_creado_listo:
-    st.header("1. Crear Perfil Maestro")
-else:
+if not perfil_disponible:
+    if origen_perfil == "Cargar JSON":
+        st.info("Carga tu Perfil Maestro JSON para continuar.")
+    else:
+        st.info("Crea y valida el Perfil Maestro para continuar.")
+
+if perfil_disponible:
     st.header("2. Vacante")
-modo = st.radio(
-    "Forma de entrada",
-    ("Archivo JSON", "Formulario"),
-    horizontal=True,
-    key=f"modo_{version_carga}",
-)
-
-vacante_archivo = None
-titulo = empresa = ubicacion = url = texto = ""
-
-if modo == "Archivo JSON":
-    vacante_archivo = st.file_uploader(
-        "Carga la vacante",
-        type=["json"],
-        help="JSON: máximo 2 MB.",
-        key=f"vacante_archivo_{version_carga}",
-    )
-else:
-    col_1, col_2 = st.columns(2)
-    titulo = col_1.text_input(
-        "Título de la vacante",
-        max_chars=300,
-        key=f"titulo_{version_carga}",
-    )
-    empresa = col_2.text_input(
-        "Empresa",
-        max_chars=300,
-        key=f"empresa_{version_carga}",
-    )
-    ubicacion = col_1.text_input(
-        "Ubicación",
-        max_chars=300,
-        key=f"ubicacion_{version_carga}",
-    )
-    url = col_2.text_input(
-        "Enlace de la oferta (opcional)",
-        max_chars=2048,
-        key=f"url_{version_carga}",
-    )
-    texto = st.text_area(
-        "Texto completo de la oferta",
-        height=240,
-        max_chars=100_000,
-        key=f"texto_{version_carga}",
+    modo = st.radio(
+        "Forma de entrada",
+        ("Archivo JSON", "Formulario"),
+        horizontal=True,
+        key=f"modo_{version_carga}",
     )
 
-st.header("3. Procesamiento")
-confirmacion = st.checkbox(
-    "Confirmo que revisaré la vigencia de la oferta antes de postular.",
-    key=f"confirmacion_{version_carga}",
-)
+    vacante_archivo = None
+    titulo = empresa = ubicacion = url = texto = ""
 
-if st.button(
-    "Analizar y generar candidatura",
-    type="primary",
-    disabled=not confirmacion,
-    use_container_width=True,
-):
-    try:
-        if origen_perfil == "Crear nuevo":
-            if perfil_creado is None:
-                raise ServicioAplicacionError(
-                    "Primero crea y valida el Perfil Maestro."
-                )
-            perfil = perfil_creado
-        else:
-            if perfil_archivo is None:
-                raise ServicioAplicacionError(
-                    "Debes cargar un Perfil Maestro JSON."
-                )
-            perfil = leer_json_bytes(
-                perfil_archivo.getvalue(),
-                "El Perfil Maestro",
-            )
-        validar_perfil_o_fallar(perfil)
-
-        if modo == "Archivo JSON":
-            if vacante_archivo is None:
-                raise ServicioAplicacionError(
-                    "Debes cargar una vacante JSON."
-                )
-            vacante = leer_json_bytes(
-                vacante_archivo.getvalue(),
-                "La vacante",
-            )
-        else:
-            vacante = construir_vacante_manual(
-                titulo=titulo,
-                empresa=empresa,
-                ubicacion=ubicacion,
-                texto=texto,
-                url=url,
-            )
-
-        foto = foto_archivo.getvalue() if foto_archivo else None
-        extension = (
-            Path(foto_archivo.name).suffix
-            if foto_archivo
-            else ".jpg"
+    if modo == "Archivo JSON":
+        vacante_archivo = st.file_uploader(
+            "Carga la vacante",
+            type=["json"],
+            help="JSON: máximo 2 MB.",
+            key=f"vacante_archivo_{version_carga}",
+        )
+    else:
+        col_1, col_2 = st.columns(2)
+        titulo = col_1.text_input(
+            "Título de la vacante",
+            max_chars=300,
+            key=f"titulo_{version_carga}",
+        )
+        empresa = col_2.text_input(
+            "Empresa",
+            max_chars=300,
+            key=f"empresa_{version_carga}",
+        )
+        ubicacion = col_1.text_input(
+            "Ubicación",
+            max_chars=300,
+            key=f"ubicacion_{version_carga}",
+        )
+        url = col_2.text_input(
+            "Enlace de la oferta (opcional)",
+            max_chars=2048,
+            key=f"url_{version_carga}",
+        )
+        texto = st.text_area(
+            "Texto completo de la oferta",
+            height=240,
+            max_chars=100_000,
+            key=f"texto_{version_carga}",
         )
 
-        with st.spinner("Analizando y generando documentos..."):
-            resultado = procesar_candidatura(
-                perfil=perfil,
-                vacante=vacante,
-                fotografia=foto,
-                extension_fotografia=extension,
+    st.header("3. Procesamiento")
+    confirmacion = st.checkbox(
+        "Confirmo que revisaré la vigencia de la oferta antes de postular.",
+        key=f"confirmacion_{version_carga}",
+    )
+
+    if st.button(
+        "Analizar y generar candidatura",
+        type="primary",
+        disabled=not confirmacion,
+        use_container_width=True,
+    ):
+        try:
+            if origen_perfil == "Crear nuevo":
+                if perfil_creado is None:
+                    raise ServicioAplicacionError(
+                        "Primero crea y valida el Perfil Maestro."
+                    )
+                perfil = perfil_creado
+            else:
+                if perfil_archivo is None:
+                    raise ServicioAplicacionError(
+                        "Debes cargar un Perfil Maestro JSON."
+                    )
+                perfil = leer_json_bytes(
+                    perfil_archivo.getvalue(),
+                    "El Perfil Maestro",
+                )
+            validar_perfil_o_fallar(perfil)
+
+            if modo == "Archivo JSON":
+                if vacante_archivo is None:
+                    raise ServicioAplicacionError(
+                        "Debes cargar una vacante JSON."
+                    )
+                vacante = leer_json_bytes(
+                    vacante_archivo.getvalue(),
+                    "La vacante",
+                )
+            else:
+                vacante = construir_vacante_manual(
+                    titulo=titulo,
+                    empresa=empresa,
+                    ubicacion=ubicacion,
+                    texto=texto,
+                    url=url,
+                )
+
+            foto = foto_archivo.getvalue() if foto_archivo else None
+            extension = (
+                Path(foto_archivo.name).suffix
+                if foto_archivo
+                else ".jpg"
             )
 
-        st.session_state["ultimo_resultado"] = resultado
+            with st.spinner("Analizando y generando documentos..."):
+                resultado = procesar_candidatura(
+                    perfil=perfil,
+                    vacante=vacante,
+                    fotografia=foto,
+                    extension_fotografia=extension,
+                )
 
-    except (PerfilMaestroError, ServicioAplicacionError) as error:
-        st.error(str(error))
-    except Exception:
-        st.error(
-            "Ocurrió un error inesperado. "
-            "No se mostraron detalles internos por seguridad."
-        )
+            st.session_state["ultimo_resultado"] = resultado
 
-if "ultimo_resultado" in st.session_state:
+        except (PerfilMaestroError, ServicioAplicacionError) as error:
+            st.error(str(error))
+        except Exception:
+            st.error(
+                "Ocurrió un error inesperado. "
+                "No se mostraron detalles internos por seguridad."
+            )
+
+if perfil_disponible and "ultimo_resultado" in st.session_state:
     mostrar_resultado(st.session_state["ultimo_resultado"])
