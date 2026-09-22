@@ -6,6 +6,7 @@ from pathlib import Path
 import streamlit as st
 
 from constructor_perfil import construir_perfil_maestro, serializar_perfil
+from extractor_cv import ExtractorCVError, extraer_texto_cv, proponer_borrador
 from perfil_maestro import PerfilMaestroError, validar_perfil_o_fallar
 from servicio_aplicacion import (
     ServicioAplicacionError,
@@ -27,6 +28,8 @@ st.set_page_config(
 def limpiar_sesion() -> None:
     prefijos_privados = (
         "perfil_archivo",
+        "cv_archivo",
+        "importar_",
         "origen_perfil_",
         "crear_",
         "foto_archivo",
@@ -45,6 +48,8 @@ def limpiar_sesion() -> None:
             "ultimo_resultado",
             "perfil_creado",
             "perfil_creado_listo",
+            "perfil_creado_origen",
+            "borrador_importacion",
         } or clave.startswith(
             prefijos_privados
         ):
@@ -124,10 +129,11 @@ with st.sidebar:
     st.header("1. Perfil Maestro")
     origen_perfil = st.radio(
         "Forma de entrada",
-        ("Cargar JSON", "Crear nuevo"),
+        ("Cargar JSON", "Importar CV", "Crear nuevo"),
         key=f"origen_perfil_{version_carga}",
     )
     perfil_archivo = None
+    cv_archivo = None
     if origen_perfil == "Cargar JSON":
         perfil_archivo = st.file_uploader(
             "Carga el Perfil Maestro",
@@ -135,6 +141,14 @@ with st.sidebar:
             help="JSON: máximo 2 MB. Se procesa durante esta sesión.",
             key=f"perfil_archivo_{version_carga}",
         )
+    elif origen_perfil == "Importar CV":
+        cv_archivo = st.file_uploader(
+            "Carga tu CV real",
+            type=["pdf", "docx"],
+            help="PDF o DOCX: máximo 10 MB. Se procesa durante esta sesión.",
+            key=f"cv_archivo_{version_carga}",
+        )
+        st.info("Extraeremos el texto para que revises cada dato antes de usarlo.")
     else:
         st.info("Completa el formulario principal y descarga tu copia.")
     foto_archivo = st.file_uploader(
@@ -151,9 +165,14 @@ with st.sidebar:
 
 perfil_creado = st.session_state.get("perfil_creado")
 perfil_creado_listo = bool(st.session_state.get("perfil_creado_listo"))
+perfil_creado_origen = st.session_state.get("perfil_creado_origen")
 
-if origen_perfil == "Crear nuevo" and not perfil_creado_listo:
+if (
+    origen_perfil in {"Crear nuevo", "Importar CV"}
+    and perfil_creado_origen != origen_perfil
+):
     perfil_creado = None
+    perfil_creado_listo = False
 
 st.header("1. Perfil Maestro")
 
@@ -271,6 +290,7 @@ if origen_perfil == "Crear nuevo":
             )
             st.session_state["perfil_creado"] = perfil_creado
             st.session_state["perfil_creado_listo"] = True
+            st.session_state["perfil_creado_origen"] = "Crear nuevo"
             perfil_creado_listo = True
             st.success("Perfil Maestro creado y validado.")
         except PerfilMaestroError as error:
@@ -285,15 +305,226 @@ if origen_perfil == "Crear nuevo":
             use_container_width=True,
         )
 
+if origen_perfil == "Importar CV":
+    st.subheader("Importar y verificar CV")
+    st.caption(
+        "El documento se usa como fuente. Nada se incorpora al Perfil Maestro "
+        "hasta que revises los campos y pulses «Validar Perfil Maestro»."
+    )
+
+    if cv_archivo is None:
+        st.info("Carga un CV PDF o DOCX desde la barra lateral.")
+    else:
+        if st.button(
+            "Extraer datos del CV",
+            type="primary",
+            use_container_width=True,
+            key=f"importar_extraer_{version_carga}",
+        ):
+            try:
+                extraido = extraer_texto_cv(
+                    cv_archivo.getvalue(),
+                    cv_archivo.name,
+                )
+                st.session_state["borrador_importacion"] = {
+                    "archivo": extraido,
+                    "borrador": proponer_borrador(extraido["texto"]),
+                }
+            except ExtractorCVError as error:
+                st.error(str(error))
+
+        importacion = st.session_state.get("borrador_importacion")
+        if importacion:
+            archivo = importacion["archivo"]
+            borrador = importacion["borrador"]
+            st.success(
+                f"Texto extraído de {archivo['nombre_archivo']}: "
+                f"{archivo['caracteres']} caracteres. Revisa los datos."
+            )
+            with st.expander("Ver texto original extraído"):
+                st.text_area(
+                    "Fuente del CV",
+                    value=borrador["texto_fuente"],
+                    height=300,
+                    disabled=True,
+                    key=f"importar_fuente_{version_carga}",
+                )
+
+            datos = borrador["datos_personales"]
+            with st.container(border=True):
+                st.markdown("**Datos personales detectados — revisar**")
+                col_1, col_2 = st.columns(2)
+                nombre = col_1.text_input(
+                    "Nombre completo *",
+                    value=datos["nombre"],
+                    key=f"importar_nombre_{version_carga}",
+                )
+                ubicacion_perfil = col_2.text_input(
+                    "Ubicación",
+                    value=datos["ubicacion"],
+                    key=f"importar_ubicacion_{version_carga}",
+                )
+                telefono = col_1.text_input(
+                    "Teléfono",
+                    value=datos["telefono"],
+                    key=f"importar_telefono_{version_carga}",
+                )
+                email = col_2.text_input(
+                    "Correo electrónico",
+                    value=datos["email"],
+                    key=f"importar_email_{version_carga}",
+                )
+                linkedin = st.text_input(
+                    "LinkedIn",
+                    value=datos["linkedin"],
+                    key=f"importar_linkedin_{version_carga}",
+                )
+                perfil_profesional = st.text_area(
+                    "Perfil profesional *",
+                    value=borrador["perfil_profesional"],
+                    height=130,
+                    key=f"importar_perfil_{version_carga}",
+                )
+
+                st.subheader("Formación")
+                if borrador["texto_formacion"]:
+                    st.info(
+                        "Texto localizado en la sección de formación:\n\n"
+                        + borrador["texto_formacion"]
+                    )
+                cantidad_formacion = st.number_input(
+                    "Número de estudios",
+                    min_value=1,
+                    max_value=20,
+                    value=1,
+                    step=1,
+                    key=f"importar_cantidad_formacion_{version_carga}",
+                )
+                formacion = []
+                for indice in range(int(cantidad_formacion)):
+                    st.markdown(f"**Estudio {indice + 1}**")
+                    columnas = st.columns(3)
+                    formacion.append(
+                        {
+                            "titulo": columnas[0].text_input(
+                                "Título *",
+                                key=f"importar_formacion_titulo_{version_carga}_{indice}",
+                            ),
+                            "institucion": columnas[1].text_input(
+                                "Institución *",
+                                key=f"importar_formacion_institucion_{version_carga}_{indice}",
+                            ),
+                            "periodo": columnas[2].text_input(
+                                "Periodo",
+                                key=f"importar_formacion_periodo_{version_carga}_{indice}",
+                            ),
+                        }
+                    )
+
+                st.subheader("Experiencia")
+                if borrador["texto_experiencia"]:
+                    st.info(
+                        "Texto localizado en la sección de experiencia:\n\n"
+                        + borrador["texto_experiencia"]
+                    )
+                cantidad_experiencia = st.number_input(
+                    "Número de experiencias",
+                    min_value=1,
+                    max_value=30,
+                    value=1,
+                    step=1,
+                    key=f"importar_cantidad_experiencia_{version_carga}",
+                )
+                experiencia = []
+                for indice in range(int(cantidad_experiencia)):
+                    st.markdown(f"**Experiencia {indice + 1}**")
+                    columnas = st.columns(3)
+                    experiencia.append(
+                        {
+                            "organizacion": columnas[0].text_input(
+                                "Organización *",
+                                key=f"importar_experiencia_organizacion_{version_carga}_{indice}",
+                            ),
+                            "cargo": columnas[1].text_input(
+                                "Cargo *",
+                                key=f"importar_experiencia_cargo_{version_carga}_{indice}",
+                            ),
+                            "periodo": columnas[2].text_input(
+                                "Periodo *",
+                                key=f"importar_experiencia_periodo_{version_carga}_{indice}",
+                            ),
+                            "area": st.text_input(
+                                "Áreas, separadas por comas",
+                                key=f"importar_experiencia_area_{version_carga}_{indice}",
+                            ),
+                            "funciones": st.text_area(
+                                "Funciones, una por línea",
+                                key=f"importar_experiencia_funciones_{version_carga}_{indice}",
+                            ),
+                        }
+                    )
+
+                competencias = st.text_area(
+                    "Competencias, una por línea *",
+                    value="\n".join(borrador["competencias"]),
+                    height=130,
+                    key=f"importar_competencias_{version_carga}",
+                )
+                confirmar_importacion = st.checkbox(
+                    "Confirmo que revisé los datos contra el CV original.",
+                    key=f"importar_confirmacion_{version_carga}",
+                )
+                validar_importacion = st.button(
+                    "Validar y crear Perfil Maestro",
+                    type="primary",
+                    disabled=not confirmar_importacion,
+                    use_container_width=True,
+                    key=f"importar_validar_{version_carga}",
+                )
+
+            if validar_importacion:
+                try:
+                    perfil_creado = construir_perfil_maestro(
+                        nombre=nombre,
+                        ubicacion=ubicacion_perfil,
+                        telefono=telefono,
+                        email=email,
+                        linkedin=linkedin,
+                        perfil_profesional=perfil_profesional,
+                        formacion=formacion,
+                        experiencia=experiencia,
+                        competencias=competencias,
+                    )
+                    st.session_state["perfil_creado"] = perfil_creado
+                    st.session_state["perfil_creado_listo"] = True
+                    st.session_state["perfil_creado_origen"] = "Importar CV"
+                    perfil_creado_listo = True
+                    st.success("CV revisado y convertido en Perfil Maestro.")
+                except PerfilMaestroError as error:
+                    st.error(str(error))
+
+            if perfil_creado_listo and perfil_creado:
+                st.download_button(
+                    "Descargar mi Perfil Maestro JSON",
+                    data=serializar_perfil(perfil_creado),
+                    file_name="perfil_maestro.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    key=f"importar_descargar_{version_carga}",
+                )
+
+
 perfil_disponible = (
     perfil_creado_listo
-    if origen_perfil == "Crear nuevo"
+    if origen_perfil in {"Crear nuevo", "Importar CV"}
     else perfil_archivo is not None
 )
 
 if not perfil_disponible:
     if origen_perfil == "Cargar JSON":
         st.info("Carga tu Perfil Maestro JSON para continuar.")
+    elif origen_perfil == "Importar CV":
+        st.info("Extrae, revisa y valida el CV para continuar.")
     else:
         st.info("Crea y valida el Perfil Maestro para continuar.")
 
@@ -358,7 +589,7 @@ if perfil_disponible:
         use_container_width=True,
     ):
         try:
-            if origen_perfil == "Crear nuevo":
+            if origen_perfil in {"Crear nuevo", "Importar CV"}:
                 if perfil_creado is None:
                     raise ServicioAplicacionError(
                         "Primero crea y valida el Perfil Maestro."
