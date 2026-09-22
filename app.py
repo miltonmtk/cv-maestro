@@ -41,7 +41,11 @@ def limpiar_sesion() -> None:
     )
 
     for clave in list(st.session_state):
-        if clave in {"ultimo_resultado", "perfil_creado"} or clave.startswith(
+        if clave in {
+            "ultimo_resultado",
+            "perfil_creado",
+            "perfil_creado_listo",
+        } or clave.startswith(
             prefijos_privados
         ):
             st.session_state.pop(clave, None)
@@ -146,6 +150,10 @@ with st.sidebar:
     )
 
 perfil_creado = st.session_state.get("perfil_creado")
+perfil_creado_listo = bool(st.session_state.get("perfil_creado_listo"))
+
+if origen_perfil == "Crear nuevo" and not perfil_creado_listo:
+    perfil_creado = None
 
 if origen_perfil == "Crear nuevo":
     st.header("1. Crear Perfil Maestro")
@@ -260,6 +268,8 @@ if origen_perfil == "Crear nuevo":
                 competencias=competencias,
             )
             st.session_state["perfil_creado"] = perfil_creado
+            st.session_state["perfil_creado_listo"] = True
+            perfil_creado_listo = True
             st.success("Perfil Maestro creado y validado.")
         except PerfilMaestroError as error:
             st.error(str(error))
@@ -276,10 +286,10 @@ if origen_perfil == "Crear nuevo":
     # No mostrar la vacante antes de que el Perfil Maestro esté listo.
     # Además de guiar el flujo, evita que el siguiente encabezado aparezca
     # visualmente antes de los controles contenidos en el formulario.
-    if perfil_creado is None:
+    if not perfil_creado_listo:
         st.stop()
 
-if origen_perfil == "Crear nuevo" and perfil_creado is None:
+if origen_perfil == "Crear nuevo" and not perfil_creado_listo:
     st.header("1. Crear Perfil Maestro")
 else:
     st.header("2. Vacante")
