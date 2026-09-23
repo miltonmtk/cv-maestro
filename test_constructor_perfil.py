@@ -45,6 +45,47 @@ def test_construye_perfil_valido_desde_formulario():
         "Competencia uno",
         "Competencia dos",
     ]
+    assert perfil["metadatos"] == {
+        "version_esquema": "1.0",
+        "origen": "formulario",
+        "confirmado_por_usuario": True,
+        "fuente": {"tipo": "formulario", "nombre_archivo": ""},
+    }
+    assert perfil["evidencia"]["B_confirmada"] == [
+        "datos_personales",
+        "perfil_profesional",
+        "formacion",
+        "experiencia",
+        "competencias",
+    ]
+
+
+def test_importacion_conserva_fuente_y_confirmacion():
+    perfil = crear(
+        origen="importacion_cv",
+        fuente_nombre="curriculum_real.pdf",
+        confirmado_por_usuario=True,
+    )
+
+    assert perfil["metadatos"]["origen"] == "importacion_cv"
+    assert perfil["metadatos"]["fuente"] == {
+        "tipo": "documento_cv",
+        "nombre_archivo": "curriculum_real.pdf",
+    }
+    assert perfil["trazabilidad"]["experiencia"] == {
+        "estado": "confirmado_usuario",
+        "fuente_tipo": "documento_cv",
+        "fuente_nombre": "curriculum_real.pdf",
+    }
+
+
+def test_rechaza_importacion_no_confirmada():
+    with pytest.raises(PerfilMaestroError, match="confirmación expresa"):
+        crear(
+            origen="importacion_cv",
+            fuente_nombre="curriculum_real.pdf",
+            confirmado_por_usuario=False,
+        )
 
 
 def test_rechaza_perfil_sin_nombre():

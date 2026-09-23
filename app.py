@@ -494,6 +494,9 @@ if origen_perfil == "Importar CV":
                         formacion=formacion,
                         experiencia=experiencia,
                         competencias=competencias,
+                        origen="importacion_cv",
+                        fuente_nombre=archivo["nombre_archivo"],
+                        confirmado_por_usuario=confirmar_importacion,
                     )
                     st.session_state["perfil_creado"] = perfil_creado
                     st.session_state["perfil_creado_listo"] = True

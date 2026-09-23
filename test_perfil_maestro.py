@@ -52,6 +52,25 @@ def test_perfil_valido_no_tiene_errores():
     assert validar_perfil(perfil_valido()) == []
 
 
+def test_perfil_anterior_sin_metadatos_sigue_siendo_compatible():
+    perfil = perfil_valido()
+
+    assert "metadatos" not in perfil
+    assert validar_perfil(perfil) == []
+
+
+def test_rechaza_metadatos_nuevos_incompletos():
+    perfil = perfil_valido()
+    perfil["metadatos"] = {
+        "version_esquema": "1.0",
+        "origen": "importacion_cv",
+        "confirmado_por_usuario": True,
+        "fuente": {},
+    }
+
+    assert "metadatos.fuente.tipo es obligatorio." in validar_perfil(perfil)
+
+
 def test_falta_nombre_se_detecta():
     perfil = perfil_valido()
     del perfil["datos_personales"]["nombre"]

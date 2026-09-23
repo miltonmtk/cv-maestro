@@ -6,6 +6,10 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 
+VERSION_ESQUEMA_PERFIL = "1.0"
+ORIGENES_PERFIL = {"formulario", "importacion_cv", "json_existente"}
+
+
 class PerfilMaestroError(ValueError):
     """Error de carga o validación del Perfil Maestro."""
 
@@ -157,6 +161,58 @@ def validar_perfil(perfil: Dict[str, Any]) -> List[str]:
                 ):
                     errores.append(
                         f"evidencia.{nivel} debe ser una lista."
+                    )
+
+    metadatos = perfil.get("metadatos")
+    if metadatos is not None:
+        if not isinstance(metadatos, dict):
+            errores.append("metadatos debe ser un diccionario.")
+        else:
+            version = str(metadatos.get("version_esquema", "")).strip()
+            if not version:
+                errores.append("metadatos.version_esquema es obligatorio.")
+
+            origen = str(metadatos.get("origen", "")).strip()
+            if origen not in ORIGENES_PERFIL:
+                errores.append(
+                    "metadatos.origen debe ser formulario, "
+                    "importacion_cv o json_existente."
+                )
+
+            confirmado = metadatos.get("confirmado_por_usuario")
+            if not isinstance(confirmado, bool):
+                errores.append(
+                    "metadatos.confirmado_por_usuario debe ser verdadero o falso."
+                )
+
+            fuente = metadatos.get("fuente")
+            if not isinstance(fuente, dict):
+                errores.append("metadatos.fuente debe ser un diccionario.")
+            elif not str(fuente.get("tipo", "")).strip():
+                errores.append("metadatos.fuente.tipo es obligatorio.")
+
+    trazabilidad = perfil.get("trazabilidad")
+    if trazabilidad is not None:
+        if not isinstance(trazabilidad, dict):
+            errores.append("trazabilidad debe ser un diccionario.")
+        else:
+            for seccion in (
+                "datos_personales",
+                "perfil_profesional",
+                "formacion",
+                "experiencia",
+                "competencias",
+            ):
+                registro = trazabilidad.get(seccion)
+                if not isinstance(registro, dict):
+                    errores.append(
+                        f"trazabilidad.{seccion} debe ser un diccionario."
+                    )
+                    continue
+                if registro.get("estado") != "confirmado_usuario":
+                    errores.append(
+                        f"trazabilidad.{seccion}.estado debe ser "
+                        "confirmado_usuario."
                     )
 
     return errores
