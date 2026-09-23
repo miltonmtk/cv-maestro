@@ -225,6 +225,15 @@ def _proponer_formacion(texto: str) -> List[Dict[str, str]]:
         periodo = ""
         if re.fullmatch(r"(?:19|20)\d{2}(?:\s*[-–—/]\s*(?:19|20)\d{2})?", partes[-1]):
             periodo = partes.pop()
+        if len(partes) == 1:
+            separada = re.match(
+                r"^(.+?)\s+((?:instituci[oó]n educativa|universidad|instituto|"
+                r"centro educativo|colegio|escuela|academia)\b.+)$",
+                partes[0],
+                flags=re.IGNORECASE,
+            )
+            if separada:
+                partes = [separada.group(1).strip(), separada.group(2).strip()]
         if len(partes) >= 2:
             propuestas.append({
                 "titulo": partes[0],
