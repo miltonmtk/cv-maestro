@@ -326,9 +326,13 @@ if origen_perfil == "Importar CV":
                     cv_archivo.getvalue(),
                     cv_archivo.name,
                 )
+                revision_anterior = st.session_state.get(
+                    "borrador_importacion", {}
+                ).get("revision", 0)
                 st.session_state["borrador_importacion"] = {
                     "archivo": extraido,
                     "borrador": proponer_borrador(extraido["texto"]),
+                    "revision": revision_anterior + 1,
                 }
             except ExtractorCVError as error:
                 st.error(str(error))
@@ -337,6 +341,7 @@ if origen_perfil == "Importar CV":
         if importacion:
             archivo = importacion["archivo"]
             borrador = importacion["borrador"]
+            clave_borrador = f"{version_carga}_{importacion.get('revision', 0)}"
             formacion_propuesta = borrador.get("formacion", [])
             experiencia_propuesta = borrador.get("experiencia", [])
             st.success(
@@ -349,7 +354,7 @@ if origen_perfil == "Importar CV":
                     value=borrador["texto_fuente"],
                     height=300,
                     disabled=True,
-                    key=f"importar_fuente_{version_carga}",
+                    key=f"importar_fuente_{clave_borrador}",
                 )
 
             datos = borrador["datos_personales"]
@@ -359,33 +364,33 @@ if origen_perfil == "Importar CV":
                 nombre = col_1.text_input(
                     "Nombre completo *",
                     value=datos["nombre"],
-                    key=f"importar_nombre_{version_carga}",
+                    key=f"importar_nombre_{clave_borrador}",
                 )
                 ubicacion_perfil = col_2.text_input(
                     "Ubicación",
                     value=datos["ubicacion"],
-                    key=f"importar_ubicacion_{version_carga}",
+                    key=f"importar_ubicacion_{clave_borrador}",
                 )
                 telefono = col_1.text_input(
                     "Teléfono",
                     value=datos["telefono"],
-                    key=f"importar_telefono_{version_carga}",
+                    key=f"importar_telefono_{clave_borrador}",
                 )
                 email = col_2.text_input(
                     "Correo electrónico",
                     value=datos["email"],
-                    key=f"importar_email_{version_carga}",
+                    key=f"importar_email_{clave_borrador}",
                 )
                 linkedin = st.text_input(
                     "LinkedIn",
                     value=datos["linkedin"],
-                    key=f"importar_linkedin_{version_carga}",
+                    key=f"importar_linkedin_{clave_borrador}",
                 )
                 perfil_profesional = st.text_area(
                     "Perfil profesional *",
                     value=borrador["perfil_profesional"],
                     height=130,
-                    key=f"importar_perfil_{version_carga}",
+                    key=f"importar_perfil_{clave_borrador}",
                 )
 
                 st.subheader("Formación")
@@ -400,7 +405,7 @@ if origen_perfil == "Importar CV":
                     max_value=20,
                     value=max(1, len(formacion_propuesta)),
                     step=1,
-                    key=f"importar_cantidad_formacion_{version_carga}",
+                    key=f"importar_cantidad_formacion_{clave_borrador}",
                 )
                 formacion = []
                 for indice in range(int(cantidad_formacion)):
@@ -416,17 +421,17 @@ if origen_perfil == "Importar CV":
                             "titulo": columnas[0].text_input(
                                 "Título *",
                                 value=propuesta["titulo"],
-                                key=f"importar_formacion_titulo_{version_carga}_{indice}",
+                                key=f"importar_formacion_titulo_{clave_borrador}_{indice}",
                             ),
                             "institucion": columnas[1].text_input(
                                 "Institución *",
                                 value=propuesta["institucion"],
-                                key=f"importar_formacion_institucion_{version_carga}_{indice}",
+                                key=f"importar_formacion_institucion_{clave_borrador}_{indice}",
                             ),
                             "periodo": columnas[2].text_input(
                                 "Periodo",
                                 value=propuesta["periodo"],
-                                key=f"importar_formacion_periodo_{version_carga}_{indice}",
+                                key=f"importar_formacion_periodo_{clave_borrador}_{indice}",
                             ),
                         }
                     )
@@ -443,7 +448,7 @@ if origen_perfil == "Importar CV":
                     max_value=30,
                     value=max(1, len(experiencia_propuesta)),
                     step=1,
-                    key=f"importar_cantidad_experiencia_{version_carga}",
+                    key=f"importar_cantidad_experiencia_{clave_borrador}",
                 )
                 experiencia = []
                 for indice in range(int(cantidad_experiencia)):
@@ -462,27 +467,27 @@ if origen_perfil == "Importar CV":
                             "organizacion": columnas[0].text_input(
                                 "Organización *",
                                 value=propuesta["organizacion"],
-                                key=f"importar_experiencia_organizacion_{version_carga}_{indice}",
+                                key=f"importar_experiencia_organizacion_{clave_borrador}_{indice}",
                             ),
                             "cargo": columnas[1].text_input(
                                 "Cargo *",
                                 value=propuesta["cargo"],
-                                key=f"importar_experiencia_cargo_{version_carga}_{indice}",
+                                key=f"importar_experiencia_cargo_{clave_borrador}_{indice}",
                             ),
                             "periodo": columnas[2].text_input(
                                 "Periodo *",
                                 value=propuesta["periodo"],
-                                key=f"importar_experiencia_periodo_{version_carga}_{indice}",
+                                key=f"importar_experiencia_periodo_{clave_borrador}_{indice}",
                             ),
                             "area": st.text_input(
                                 "Áreas, separadas por comas",
                                 value=", ".join(propuesta["area"]),
-                                key=f"importar_experiencia_area_{version_carga}_{indice}",
+                                key=f"importar_experiencia_area_{clave_borrador}_{indice}",
                             ),
                             "funciones": st.text_area(
                                 "Funciones, una por línea",
                                 value="\n".join(propuesta["funciones"]),
-                                key=f"importar_experiencia_funciones_{version_carga}_{indice}",
+                                key=f"importar_experiencia_funciones_{clave_borrador}_{indice}",
                             ),
                         }
                     )
@@ -491,18 +496,18 @@ if origen_perfil == "Importar CV":
                     "Competencias, una por línea *",
                     value="\n".join(borrador["competencias"]),
                     height=130,
-                    key=f"importar_competencias_{version_carga}",
+                    key=f"importar_competencias_{clave_borrador}",
                 )
                 confirmar_importacion = st.checkbox(
                     "Confirmo que revisé los datos contra el CV original.",
-                    key=f"importar_confirmacion_{version_carga}",
+                    key=f"importar_confirmacion_{clave_borrador}",
                 )
                 validar_importacion = st.button(
                     "Validar y crear Perfil Maestro",
                     type="primary",
                     disabled=not confirmar_importacion,
                     use_container_width=True,
-                    key=f"importar_validar_{version_carga}",
+                    key=f"importar_validar_{clave_borrador}",
                 )
 
             if validar_importacion:
@@ -536,7 +541,7 @@ if origen_perfil == "Importar CV":
                     file_name="perfil_maestro.json",
                     mime="application/json",
                     use_container_width=True,
-                    key=f"importar_descargar_{version_carga}",
+                    key=f"importar_descargar_{clave_borrador}",
                 )
 
 
