@@ -337,6 +337,8 @@ if origen_perfil == "Importar CV":
         if importacion:
             archivo = importacion["archivo"]
             borrador = importacion["borrador"]
+            formacion_propuesta = borrador.get("formacion", [])
+            experiencia_propuesta = borrador.get("experiencia", [])
             st.success(
                 f"Texto extraído de {archivo['nombre_archivo']}: "
                 f"{archivo['caracteres']} caracteres. Revisa los datos."
@@ -396,26 +398,34 @@ if origen_perfil == "Importar CV":
                     "Número de estudios",
                     min_value=1,
                     max_value=20,
-                    value=1,
+                    value=max(1, len(formacion_propuesta)),
                     step=1,
                     key=f"importar_cantidad_formacion_{version_carga}",
                 )
                 formacion = []
                 for indice in range(int(cantidad_formacion)):
+                    propuesta = (
+                        formacion_propuesta[indice]
+                        if indice < len(formacion_propuesta)
+                        else {"titulo": "", "institucion": "", "periodo": ""}
+                    )
                     st.markdown(f"**Estudio {indice + 1}**")
                     columnas = st.columns(3)
                     formacion.append(
                         {
                             "titulo": columnas[0].text_input(
                                 "Título *",
+                                value=propuesta["titulo"],
                                 key=f"importar_formacion_titulo_{version_carga}_{indice}",
                             ),
                             "institucion": columnas[1].text_input(
                                 "Institución *",
+                                value=propuesta["institucion"],
                                 key=f"importar_formacion_institucion_{version_carga}_{indice}",
                             ),
                             "periodo": columnas[2].text_input(
                                 "Periodo",
+                                value=propuesta["periodo"],
                                 key=f"importar_formacion_periodo_{version_carga}_{indice}",
                             ),
                         }
@@ -431,34 +441,47 @@ if origen_perfil == "Importar CV":
                     "Número de experiencias",
                     min_value=1,
                     max_value=30,
-                    value=1,
+                    value=max(1, len(experiencia_propuesta)),
                     step=1,
                     key=f"importar_cantidad_experiencia_{version_carga}",
                 )
                 experiencia = []
                 for indice in range(int(cantidad_experiencia)):
+                    propuesta = (
+                        experiencia_propuesta[indice]
+                        if indice < len(experiencia_propuesta)
+                        else {
+                            "organizacion": "", "cargo": "", "periodo": "",
+                            "area": [], "funciones": [],
+                        }
+                    )
                     st.markdown(f"**Experiencia {indice + 1}**")
                     columnas = st.columns(3)
                     experiencia.append(
                         {
                             "organizacion": columnas[0].text_input(
                                 "Organización *",
+                                value=propuesta["organizacion"],
                                 key=f"importar_experiencia_organizacion_{version_carga}_{indice}",
                             ),
                             "cargo": columnas[1].text_input(
                                 "Cargo *",
+                                value=propuesta["cargo"],
                                 key=f"importar_experiencia_cargo_{version_carga}_{indice}",
                             ),
                             "periodo": columnas[2].text_input(
                                 "Periodo *",
+                                value=propuesta["periodo"],
                                 key=f"importar_experiencia_periodo_{version_carga}_{indice}",
                             ),
                             "area": st.text_input(
                                 "Áreas, separadas por comas",
+                                value=", ".join(propuesta["area"]),
                                 key=f"importar_experiencia_area_{version_carga}_{indice}",
                             ),
                             "funciones": st.text_area(
                                 "Funciones, una por línea",
+                                value="\n".join(propuesta["funciones"]),
                                 key=f"importar_experiencia_funciones_{version_carga}_{indice}",
                             ),
                         }

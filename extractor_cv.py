@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, List
@@ -121,7 +122,7 @@ def _nombre_probable(lineas: List[str]) -> str:
         "perfil profesional",
         "experiencia profesional",
     }
-    for linea in lineas[:12]:
+    for indice, linea in enumerate(lineas[:12]):
         candidata = linea.strip(" |-")
         palabras = candidata.split()
         if (
@@ -130,8 +131,107 @@ def _nombre_probable(lineas: List[str]) -> str:
             and not re.search(r"[@\d:/]", candidata)
             and len(candidata) <= 100
         ):
-            return candidata
+            partes = [candidata]
+            for siguiente in lineas[indice + 1:indice + 3]:
+                siguiente = siguiente.strip(" |-")
+                if (
+                    1 <= len(siguiente.split()) <= 3
+                    and siguiente == siguiente.upper()
+                    and re.fullmatch(
+                        r"[A-ZÁÉÍÓÚÜÑ][A-ZÁÉÍÓÚÜÑ '\u2019-]*",
+                        siguiente,
+                    )
+                    and not re.search(r"[@\d:/]", siguiente)
+                    and not _clave_encabezado(siguiente)
+                ):
+                    partes.append(siguiente)
+                else:
+                    break
+            return " ".join(partes)[:100]
     return ""
+
+
+def _sin_acentos(texto: str) -> str:
+    return "".join(
+        caracter
+        for caracter in unicodedata.normalize("NFD", texto)
+        if unicodedata.category(caracter) != "Mn"
+    )
+
+
+def _ubicacion_probable(lineas: List[str], email: str, telefono: str) -> str:
+    """Obtiene solo una ubicación explícita del bloque inicial del CV."""
+    for linea in lineas[:15]:
+        if email and email not in linea and telefono and telefono not in linea:
+            continue
+        segmentos = [segmento.strip(" |-·") for segmento in re.split(r"[|•]", linea)]
+        for segmento in segmentos:
+            if not segmento or "@" in segmento or re.search(r"\d{5,}", segmento):
+                continue
+            normalizado = _sin_acentos(segmento.lower())
+            if "linkedin" in normalizado or len(segmento.split()) > 6:
+                continue
+            if re.fullmatch(r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñ .,'’-]+", segmento):
+                return segmento
+    return ""
+
+
+PATRON_PERIODO = (
+    r"(?:19|20)\d{2}\s*(?:[-–—/]|\ba\b)\s*"
+    r"(?:actualidad|presente|(?:19|20)\d{2})"
+)
+
+PATRON_CABECERA_EXPERIENCIA = re.compile(
+    r"(?<![\wÁÉÍÓÚÜÑ])"
+    r"(?P<organizacion>"
+    r"[A-ZÁÉÍÓÚÜÑ][A-ZÁÉÍÓÚÜÑ0-9&.'’/-]*"
+    r"(?:\s+(?:DE|DEL|LA|LAS|LOS|Y|EN|[A-ZÁÉÍÓÚÜÑ0-9&.'’/-]+)){1,8}"
+    r")\s+"
+    r"(?P<cargo>[^|\n]{2,80}?)\s*\|\s*"
+    rf"(?P<periodo>{PATRON_PERIODO})",
+)
+
+
+def _frases(texto: str) -> List[str]:
+    return [
+        frase.strip(" .•-\n\t")
+        for frase in re.split(r"(?:\.\s+|[•\n]+)", texto)
+        if frase.strip(" .•-\n\t")
+    ]
+
+
+def _proponer_experiencias(texto: str) -> List[Dict[str, Any]]:
+    coincidencias = list(PATRON_CABECERA_EXPERIENCIA.finditer(texto))
+    propuestas: List[Dict[str, Any]] = []
+    for indice, coincidencia in enumerate(coincidencias):
+        fin = coincidencias[indice + 1].start() if indice + 1 < len(coincidencias) else len(texto)
+        propuestas.append({
+            "organizacion": coincidencia.group("organizacion").strip(),
+            "cargo": coincidencia.group("cargo").strip(" .·-"),
+            "periodo": coincidencia.group("periodo").strip(),
+            "area": [],
+            "funciones": _frases(texto[coincidencia.end():fin]),
+        })
+    return propuestas
+
+
+def _proponer_formacion(texto: str) -> List[Dict[str, str]]:
+    """Propone estudios solo cuando existen separadores explícitos; no adivina."""
+    propuestas: List[Dict[str, str]] = []
+    for linea in texto.splitlines():
+        partes = [parte.strip(" .•-") for parte in re.split(r"\s*[|]\s*", linea)]
+        if len(partes) < 2:
+            continue
+        periodo = ""
+        if re.fullmatch(r"(?:19|20)\d{2}(?:\s*[-–—/]\s*(?:19|20)\d{2})?", partes[-1]):
+            periodo = partes.pop()
+        if len(partes) >= 2:
+            propuestas.append({
+                "titulo": partes[0],
+                "institucion": partes[1],
+                "periodo": periodo,
+            })
+    return propuestas
 
 
 ENCABEZADOS = {
@@ -202,17 +302,22 @@ def proponer_borrador(texto: str) -> Dict[str, Any]:
             if limpia and limpia not in competencias:
                 competencias.append(limpia)
 
+    texto_formacion = "\n".join(secciones["formacion"]).strip()
+    texto_experiencia = "\n".join(secciones["experiencia"]).strip()
+
     return {
         "datos_personales": {
             "nombre": _nombre_probable(lineas),
-            "ubicacion": "",
+            "ubicacion": _ubicacion_probable(lineas, email, telefono),
             "telefono": telefono,
             "email": email,
             "linkedin": linkedin,
         },
         "perfil_profesional": perfil,
         "competencias": competencias,
-        "texto_formacion": "\n".join(secciones["formacion"]).strip(),
-        "texto_experiencia": "\n".join(secciones["experiencia"]).strip(),
+        "formacion": _proponer_formacion(texto_formacion),
+        "experiencia": _proponer_experiencias(texto_experiencia),
+        "texto_formacion": texto_formacion,
+        "texto_experiencia": texto_experiencia,
         "texto_fuente": texto,
     }

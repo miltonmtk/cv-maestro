@@ -41,6 +41,70 @@ def test_extrae_docx_y_datos_basicos_sin_inventar():
     assert borrador["datos_personales"]["ubicacion"] == ""
 
 
+def test_propone_nombre_multilinea_ubicacion_y_experiencias_separadas():
+    texto = """LEIDY ALEXANDRA MONTAÑO
+MORENO
+CAJERA · REPONEDORA · DEPENDIENTA
+Lorca, Murcia | 627 811 853 | alex-1016865@hotmail.com
+PERFIL PROFESIONAL
+Profesional de atención al cliente, caja y ventas.
+EXPERIENCIA PROFESIONAL
+ALMACÉN LA GANGA Cajera | 2011 – 2022 Atención al cliente. Manejo de caja.
+TIENDA DE ROPA KAN KAN Asesora de ventas · Cajera | 2006 – 2010 Ventas. Control de inventarios.
+COMPETENCIAS
+Atención al cliente | Manejo de caja
+"""
+
+    borrador = proponer_borrador(texto)
+
+    assert borrador["datos_personales"]["nombre"] == "LEIDY ALEXANDRA MONTAÑO MORENO"
+    assert borrador["datos_personales"]["ubicacion"] == "Lorca, Murcia"
+    assert len(borrador["experiencia"]) == 2
+    assert borrador["experiencia"][0] == {
+        "organizacion": "ALMACÉN LA GANGA",
+        "cargo": "Cajera",
+        "periodo": "2011 – 2022",
+        "area": [],
+        "funciones": ["Atención al cliente", "Manejo de caja"],
+    }
+    assert borrador["experiencia"][1]["organizacion"] == "TIENDA DE ROPA KAN KAN"
+    assert borrador["experiencia"][1]["cargo"] == "Asesora de ventas · Cajera"
+
+
+def test_nombre_no_absorbe_un_cargo_en_mayusculas():
+    texto = """LEIDY MONTAÑO
+CAJERA · REPONEDORA
+Lorca, Murcia | 627 811 853 | leidy@example.com
+PERFIL
+Atención al cliente.
+"""
+
+    borrador = proponer_borrador(texto)
+
+    assert borrador["datos_personales"]["nombre"] == "LEIDY MONTAÑO"
+
+
+def test_formacion_solo_se_estructura_con_separadores_explicitos():
+    texto = """ANA PÉREZ GÓMEZ
+PERFIL
+Perfil de prueba.
+FORMACIÓN
+Técnica en Ventas | Instituto Ejemplo | 2010
+EXPERIENCIA
+EMPRESA EJEMPLO Vendedora | 2011 - 2015 Atención al cliente.
+COMPETENCIAS
+Ventas
+"""
+
+    borrador = proponer_borrador(texto)
+
+    assert borrador["formacion"] == [{
+        "titulo": "Técnica en Ventas",
+        "institucion": "Instituto Ejemplo",
+        "periodo": "2010",
+    }]
+
+
 def test_rechaza_extension_no_admitida():
     with pytest.raises(ExtractorCVError, match="PDF o DOCX"):
         extraer_texto_cv(b"contenido", "cv.txt")
