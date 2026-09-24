@@ -99,7 +99,7 @@ def test_rechaza_formacion_incompleta():
 
 
 def test_rechaza_experiencia_sin_funciones():
-    with pytest.raises(PerfilMaestroError, match="agrega áreas y funciones"):
+    with pytest.raises(PerfilMaestroError, match="agrega al menos una función"):
         crear(
             experiencia=[
                 {
@@ -111,6 +111,23 @@ def test_rechaza_experiencia_sin_funciones():
                 }
             ]
         )
+
+
+def test_acepta_experiencia_sin_area_si_tiene_funciones():
+    perfil = crear(
+        experiencia=[
+            {
+                "organizacion": "Organización",
+                "cargo": "Cargo",
+                "periodo": "2025",
+                "area": "",
+                "funciones": "Atención al cliente",
+            }
+        ]
+    )
+
+    assert perfil["experiencia"][0]["area"] == []
+    assert perfil["experiencia"][0]["funciones"] == ["Atención al cliente"]
 
 
 def test_serializa_json_utf8_sin_perder_acentos():

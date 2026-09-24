@@ -97,9 +97,9 @@ def construir_perfil_maestro(
                 raise PerfilMaestroError(
                     f"Experiencia #{indice}: completa organización, cargo y periodo."
                 )
-            if not areas or not funciones:
+            if not funciones:
                 raise PerfilMaestroError(
-                    f"Experiencia #{indice}: agrega áreas y funciones."
+                    f"Experiencia #{indice}: agrega al menos una función."
                 )
             empleos.append(
                 {
