@@ -65,6 +65,52 @@ TERMINOS_DEBILES = {
 }
 
 
+# Palabras estructurales que no demuestran por sí mismas una competencia.
+# Se usan únicamente para medir correspondencia lingüística; nunca añaden
+# experiencia al Perfil Maestro.
+PALABRAS_COMPARACION_VACIAS = {
+    "para", "como", "con", "sin", "del", "las", "los", "una", "uno",
+    "unos", "unas", "que", "por", "desde", "hasta", "entre", "sobre",
+    "esta", "este", "estos", "estas", "tener", "nivel", "experiencia",
+    "conocimiento", "conocimientos", "persona", "puesto", "funciones",
+    "requisito", "requisitos", "valorable", "imprescindible", "minimo",
+    "menos", "anos", "ano", "ser", "estar", "muy", "tus", "sus",
+}
+
+
+# Equivalencias profesionales limitadas y auditables. No son equivalencias
+# universales: representan vocabulario habitual para una misma evidencia
+# en comercio y competencias transversales.
+GRUPOS_EQUIVALENTES = {
+    "ATENCION_CLIENTE": (
+        "atencion al cliente", "atencion y asesoramiento al cliente",
+        "asesoramiento al cliente", "orientacion al cliente",
+        "servicio al cliente", "trato con clientes",
+    ),
+    "CAJA_COBROS": (
+        "manejo de caja", "gestion de caja", "cajero", "cajera",
+        "cobros", "medios de pago", "datafono",
+    ),
+    "VENTAS": (
+        "ventas", "venta", "vendedor", "vendedora", "asesora de ventas",
+        "asesor de ventas", "actividad comercial",
+    ),
+    "OPERACION_TIENDA": (
+        "reposicion", "reponedor", "reponedora", "mercancia",
+        "inventario", "inventarios", "vitrinas",
+    ),
+    "TRABAJO_EQUIPO": (
+        "trabajo en equipo", "trabajar en equipo", "colaboracion",
+    ),
+    "ORGANIZACION": (
+        "organizacion", "organizada", "organizado", "orden",
+    ),
+    "RESPONSABILIDAD": (
+        "responsabilidad", "responsable", "comprometida", "comprometido",
+    ),
+}
+
+
 # ============================================================
 # UTILIDADES
 # ============================================================
@@ -82,6 +128,74 @@ def normalizar(texto: Any) -> str:
     texto = re.sub(r"[^a-z0-9+#./\- ]+", " ", texto)
     texto = re.sub(r"\s+", " ", texto)
     return texto.strip()
+
+
+def raiz_token(token: str) -> str:
+    """Reduce variaciones simples sin convertir palabras no relacionadas."""
+    token = normalizar(token)
+    for sufijo in ("amientos", "imiento", "aciones", "acion", "adoras", "adores"):
+        if token.endswith(sufijo) and len(token) > len(sufijo) + 3:
+            return token[:-len(sufijo)]
+    if token.endswith("es") and len(token) > 5:
+        return token[:-2]
+    if token.endswith("s") and len(token) > 4:
+        return token[:-1]
+    return token
+
+
+def tokens_comparables(texto: Any) -> set[str]:
+    return {
+        raiz_token(token)
+        for token in re.findall(r"[a-z0-9+#.]+", normalizar(texto))
+        if len(token) >= 3
+        and normalizar(token) not in PALABRAS_COMPARACION_VACIAS
+    }
+
+
+def conceptos_equivalentes(texto: Any) -> set[str]:
+    normalizado = normalizar(texto)
+
+    def contiene_expresion(expresion: str) -> bool:
+        patron = re.escape(normalizar(expresion))
+        return bool(
+            re.search(
+                rf"(?<![a-z0-9]){patron}(?![a-z0-9])",
+                normalizado,
+            )
+        )
+
+    return {
+        concepto
+        for concepto, expresiones in GRUPOS_EQUIVALENTES.items()
+        if any(contiene_expresion(expresion) for expresion in expresiones)
+    }
+
+
+def correspondencia_semantica(
+    requisito: Dict[str, Any],
+    corpus: Sequence[str],
+) -> tuple[float, List[str]]:
+    """Correspondencia controlada por tokens y equivalencias verificables."""
+    nombre = requisito.get("nombre", "")
+    tokens_requisito = tokens_comparables(nombre)
+    conceptos_requisito = conceptos_equivalentes(nombre)
+    mejor = 0.0
+    evidencias: List[str] = []
+
+    for fragmento in corpus:
+        tokens_fragmento = tokens_comparables(fragmento)
+        conceptos_fragmento = conceptos_equivalentes(fragmento)
+        proporcion = (
+            len(tokens_requisito & tokens_fragmento) / len(tokens_requisito)
+            if tokens_requisito else 0.0
+        )
+        if conceptos_requisito & conceptos_fragmento:
+            proporcion = max(proporcion, 0.80)
+        if proporcion > mejor:
+            mejor = proporcion
+            evidencias = [fragmento] if proporcion > 0 else []
+
+    return min(mejor, 1.0), evidencias
 
 
 def extraer_textos(objeto: Any) -> Iterable[str]:
@@ -342,13 +456,33 @@ def evaluar_requisito(
         corpus,
     )
 
+    correspondencia, evidencia_contextual = correspondencia_semantica(
+        requisito,
+        corpus,
+    )
+
     total_directas = len(directas)
 
-    if total_directas == 0:
+    # La frase completa y cada token ya no se contabilizan como exigencias
+    # independientes. El requisito se evalúa una sola vez como concepto.
+    if correspondencia >= 0.75:
+        nivel = "DIRECTO"
+        valor = max(0.80, correspondencia)
+
+    elif correspondencia >= 0.45:
+        nivel = "PARCIAL"
+        valor = max(0.55, correspondencia)
+
+    elif correspondencia >= 0.25:
+        nivel = "TRANSFERIBLE"
+        valor = max(0.30, correspondencia)
+
+    elif total_directas == 0:
         if evidencias_transferibles:
             nivel = "TRANSFERIBLE"
         else:
             nivel = "REQUIERE VERIFICACION"
+        valor = VALORES_NIVEL[nivel]
 
     else:
         proporcion = (
@@ -367,6 +501,7 @@ def evaluar_requisito(
 
         else:
             nivel = "NO CONSTA"
+        valor = VALORES_NIVEL[nivel]
 
     return {
         "nombre": nombre,
@@ -381,10 +516,14 @@ def evaluar_requisito(
             )
         ),
         "nivel": nivel,
-        "valor": VALORES_NIVEL[nivel],
-        "evidencia_directa": evidencias_directas,
+        "valor": round(valor, 2),
+        "evidencia_directa": (
+            evidencias_directas
+            or (evidencia_contextual if nivel == "DIRECTO" else [])
+        ),
         "evidencia_transferible": (
             evidencias_transferibles
+            or (evidencia_contextual if nivel in {"PARCIAL", "TRANSFERIBLE"} else [])
         ),
         "criterios_directos": directas,
         "criterios_transferibles": transferibles,

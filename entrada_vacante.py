@@ -1157,8 +1157,11 @@ def clasificar_requisito(
     ):
         return "obligatorio"
 
+    # Estar dentro de la sección «Requisitos» no convierte por sí
+    # solo cada frase en una barrera excluyente. Solo los marcadores
+    # explícitos anteriores permiten clasificarla como obligatoria.
     if seccion == "requisitos":
-        return "obligatorio"
+        return "requisito"
 
     return "funcional"
 
@@ -1172,6 +1175,9 @@ def peso_tipo(
 
     if tipo == "deseable":
         return 2
+
+    if tipo == "requisito":
+        return 4
 
     return 3
 
@@ -1259,7 +1265,10 @@ def extraer_requisitos(
         if nueva_seccion:
 
             if nueva_seccion == "fin":
-                seccion = ""
+                # Mantener el estado evita que las viñetas de salario,
+                # descuentos y demás beneficios se confundan después
+                # con requisitos del candidato.
+                seccion = "fin"
                 continue
 
             seccion = nueva_seccion
@@ -1287,12 +1296,15 @@ def extraer_requisitos(
         )
 
         incluir = (
-            seccion in {
-                "requisitos",
-                "funciones",
-            }
-            or explicito
-            or tiene_vineta
+            seccion != "fin"
+            and (
+                seccion in {
+                    "requisitos",
+                    "funciones",
+                }
+                or explicito
+                or tiene_vineta
+            )
         )
 
         if not incluir:
