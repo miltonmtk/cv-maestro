@@ -295,6 +295,7 @@ def incidencias_texto(
 def ejecutar_procesamiento(
     ruta_vacante: Path,
     perfil_maestro: Dict[str, Any],
+    permitir_no_postular: bool = False,
 ) -> dict:
     etapa(
         2,
@@ -341,6 +342,8 @@ def ejecutar_procesamiento(
         )
 
     if estado == "NO_POSTULAR":
+        if permitir_no_postular:
+            return resultado
         raise OrquestadorError(
             "DECISIÓN PROFESIONAL: NO_POSTULAR.\n"
             f"IAP: {resultado.get('iap', 0.0)} "
@@ -696,4 +699,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

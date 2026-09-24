@@ -260,8 +260,11 @@ def procesar_candidatura(
             resultado = json.loads(
                 (temporal_path / "resultado.json").read_text(encoding="utf-8")
             )
-            exportacion = resultado["exportacion"]
-            comunicaciones = resultado["comunicaciones"]
+            if resultado.get("proceso", {}).get("estado") == "NO_POSTULAR":
+                return resultado
+
+            exportacion = resultado.get("exportacion", {})
+            comunicaciones = resultado.get("comunicaciones", {})
 
             for clave in ("docx", "pdf"):
                 ruta = (temporal_path / exportacion[clave]).resolve()

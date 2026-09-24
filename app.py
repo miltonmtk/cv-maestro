@@ -82,19 +82,32 @@ def mostrar_resultado(resultado: dict) -> None:
     exportacion = resultado.get("exportacion", {})
     comunicaciones = resultado.get("comunicaciones", {})
 
-    st.success("Candidatura procesada correctamente.")
+    no_postular = proceso.get("estado") == "NO_POSTULAR"
+    if no_postular:
+        st.warning(
+            "Decisión profesional: NO POSTULAR. "
+            "La coincidencia no alcanza el umbral configurado."
+        )
+    else:
+        st.success("Candidatura procesada correctamente.")
 
     columnas = st.columns(3)
     columnas[0].metric("Decisión", proceso.get("estado", ""))
     columnas[1].metric("IAP", proceso.get("iap", 0))
     columnas[2].metric("Auditoría", proceso.get("auditoria", ""))
 
-    st.subheader("Descargas")
-    col_docx, col_pdf = st.columns(2)
-    with col_docx:
-        descargar_archivo(exportacion.get("docx", ""), "CV en DOCX")
-    with col_pdf:
-        descargar_archivo(exportacion.get("pdf", ""), "CV en PDF")
+    if no_postular:
+        st.info(
+            "No se generaron documentos porque el sistema recomienda "
+            "no presentar esta candidatura."
+        )
+    else:
+        st.subheader("Descargas")
+        col_docx, col_pdf = st.columns(2)
+        with col_docx:
+            descargar_archivo(exportacion.get("docx", ""), "CV en DOCX")
+        with col_pdf:
+            descargar_archivo(exportacion.get("pdf", ""), "CV en PDF")
 
     with st.expander("Comunicaciones"):
         carta = comunicaciones.get("carta")

@@ -31,7 +31,25 @@ def main() -> None:
 
         with redirect_stdout(registro):
             etapa = "análisis y auditoría"
-            proceso = ejecutar_procesamiento(vacante, perfil)
+            proceso = ejecutar_procesamiento(
+                vacante,
+                perfil,
+                permitir_no_postular=True,
+            )
+            if proceso.get("estado") == "NO_POSTULAR":
+                (carpeta / "resultado.json").write_text(
+                    json.dumps(
+                        {
+                            "proceso": proceso,
+                            "exportacion": {},
+                            "comunicaciones": {},
+                            "registro": registro.getvalue(),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                return
             etapa = "generación de DOCX y PDF"
             exportacion = ejecutar_exportacion(vacante, fotografia, perfil)
             etapa = "carta y correo"

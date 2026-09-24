@@ -60,6 +60,32 @@ class PersistenciaInterfazTest(unittest.TestCase):
 
         self.assertNotIn("dato privado", str(error.exception))
 
+    def test_no_postular_se_devuelve_como_decision_y_no_como_error(self):
+        def trabajador_no_postular(comando, *, cwd, **opciones):
+            carpeta = Path(cwd)
+            (carpeta / "resultado.json").write_text(
+                json.dumps({
+                    "proceso": {
+                        "estado": "NO_POSTULAR",
+                        "iap": 42.0,
+                        "umbral_iap": 70.0,
+                    },
+                    "exportacion": {},
+                    "comunicaciones": {},
+                    "registro": "",
+                }),
+                encoding="utf-8",
+            )
+            return SimpleNamespace(returncode=0)
+
+        with patch("servicio_aplicacion.validar_perfil_o_fallar", return_value={"nombre": "Prueba"}), \
+             patch("servicio_aplicacion.validar_vacante"), \
+             patch("servicio_aplicacion.subprocess.run", side_effect=trabajador_no_postular):
+            resultado = procesar_candidatura({"nombre": "Prueba"}, {"titulo": "Puesto"})
+
+        self.assertEqual(resultado["proceso"]["estado"], "NO_POSTULAR")
+        self.assertEqual(resultado["exportacion"], {})
+
 
 if __name__ == "__main__":
     unittest.main()
