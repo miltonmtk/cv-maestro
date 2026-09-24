@@ -218,7 +218,13 @@ def _proponer_experiencias(texto: str) -> List[Dict[str, Any]]:
 def _proponer_formacion(texto: str) -> List[Dict[str, str]]:
     """Propone estudios solo cuando existen separadores explícitos; no adivina."""
     propuestas: List[Dict[str, str]] = []
-    for linea in texto.splitlines():
+    lineas = [linea.strip() for linea in texto.splitlines() if linea.strip()]
+    candidatos = list(lineas)
+    if len(lineas) > 1:
+        # Los PDF suelen cortar un mismo estudio en varias líneas visuales.
+        # La unión sigue siendo segura porque después exigimos institución y año.
+        candidatos.append(" ".join(lineas))
+    for linea in candidatos:
         partes = [parte.strip(" .•-") for parte in re.split(r"\s*[|]\s*", linea)]
         if len(partes) < 2:
             continue
@@ -235,11 +241,13 @@ def _proponer_formacion(texto: str) -> List[Dict[str, str]]:
             if separada:
                 partes = [separada.group(1).strip(), separada.group(2).strip()]
         if len(partes) >= 2:
-            propuestas.append({
+            propuesta = {
                 "titulo": partes[0],
                 "institucion": partes[1],
                 "periodo": periodo,
-            })
+            }
+            if propuesta not in propuestas:
+                propuestas.append(propuesta)
     return propuestas
 
 
