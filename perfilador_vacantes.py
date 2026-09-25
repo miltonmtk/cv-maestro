@@ -82,6 +82,10 @@ PALABRAS_COMPARACION_VACIAS = {
 # universales: representan vocabulario habitual para una misma evidencia
 # en comercio y competencias transversales.
 GRUPOS_EQUIVALENTES = {
+    "SECUNDARIA_COMPLETA": (
+        "educacion secundaria obligatoria", "educacion secundaria",
+        "eso", "bachiller", "bachillerato",
+    ),
     "ATENCION_CLIENTE": (
         "atencion al cliente", "atencion y asesoramiento al cliente",
         "asesoramiento al cliente", "orientacion al cliente",
@@ -177,6 +181,20 @@ def correspondencia_semantica(
 ) -> tuple[float, List[str]]:
     """Correspondencia controlada por tokens y equivalencias verificables."""
     nombre = requisito.get("nombre", "")
+    nombre_normalizado = normalizar(nombre)
+
+    # Una trayectoria registrada demuestra el requisito genérico de
+    # experiencia previa, pero no requisitos especializados como «SAP».
+    experiencia_generica = (
+        "experiencia previa" in nombre_normalizado
+        and not any(
+            token in nombre_normalizado
+            for token in (" en ", " con ", " como ", " de ")
+        )
+    )
+    if experiencia_generica and "__experiencia_laboral__" in corpus:
+        return 1.0, ["experiencia laboral registrada"]
+
     tokens_requisito = tokens_comparables(nombre)
     conceptos_requisito = conceptos_equivalentes(nombre)
     mejor = 0.0
@@ -189,7 +207,10 @@ def correspondencia_semantica(
             len(tokens_requisito & tokens_fragmento) / len(tokens_requisito)
             if tokens_requisito else 0.0
         )
-        if conceptos_requisito & conceptos_fragmento:
+        conceptos_comunes = conceptos_requisito & conceptos_fragmento
+        if "SECUNDARIA_COMPLETA" in conceptos_comunes:
+            proporcion = max(proporcion, 1.00)
+        elif conceptos_comunes:
             proporcion = max(proporcion, 0.80)
         if proporcion > mejor:
             mejor = proporcion
@@ -229,11 +250,14 @@ def extraer_textos(objeto: Any) -> Iterable[str]:
 
 
 def construir_corpus(cv_maestro: Dict[str, Any]) -> List[str]:
-    return [
+    corpus = [
         normalizar(texto)
         for texto in extraer_textos(cv_maestro)
         if normalizar(texto)
     ]
+    if cv_maestro.get("experiencia"):
+        corpus.append("__experiencia_laboral__")
+    return corpus
 
 
 def existe_en_corpus(

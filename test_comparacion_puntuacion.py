@@ -69,6 +69,30 @@ Qué ofrecemos
     assert all(r["tipo"] == "requisito" for r in requisitos)
 
 
+def test_texto_indeed_sin_encabezado_requisitos_es_valido():
+    texto = """Detalles del empleo
+Beneficios
+Formación continua
+Descripción completa del empleo
+Educación Secundaria Obligatoria (formación mínima requerida).
+Habilidades: orientación al cliente, trabajo en equipo, proactividad.
+Se valora la experiencia previa pero no es imprescindible.
+Beneficios
+Formación continua para desarrollarte profesionalmente.
+Descuento para empleados.
+"""
+    requisitos = extraer_requisitos(texto)
+
+    assert [r["nombre"] for r in requisitos] == [
+        "Educación Secundaria Obligatoria (formación mínima requerida).",
+        "orientación al cliente",
+        "trabajo en equipo",
+        "proactividad.",
+        "Se valora la experiencia previa pero no es imprescindible.",
+    ]
+    assert all("Descuento" not in r["nombre"] for r in requisitos)
+
+
 def test_vacante_basica_reconoce_experiencia_equivalente():
     vacante = {
         "titulo": "Cajero/a - Reponedor/a",
@@ -85,6 +109,38 @@ def test_vacante_basica_reconoce_experiencia_equivalente():
     analisis = analizar_vacante(vacante, perfil_maestro=PERFIL_COMERCIO)
     decision = evaluar_decision(analisis)
 
+    assert analisis["adecuacion"] >= 70
+    assert decision["estado"] == "POSTULAR"
+    assert decision["numero_brechas_criticas"] == 0
+
+
+def test_oferta_real_indeed_carrefour_supera_umbral_sin_inventar():
+    texto = """Detalles del empleo
+Beneficios
+Formación continua
+Descripción completa del empleo
+Educación Secundaria Obligatoria (formación mínima requerida).
+Habilidades: orientación al cliente, trabajo en equipo, proactividad.
+Se valora la experiencia previa pero no es imprescindible.
+Incorporación a una gran compañía donde podrás crecer.
+Descuento del 8% para empleados.
+"""
+    from entrada_vacante import construir_vacante
+
+    vacante = construir_vacante({
+        "tipo": "texto",
+        "titulo": "Auxiliar de Cajas/Reposición",
+        "empresa": "Carrefour",
+        "ubicacion": "Getafe, Madrid provincia",
+        "texto": texto,
+        "metodo": "INTERFAZ",
+    })
+    nombres = [r["nombre"] for r in vacante["requisitos"]]
+    assert not any("Descuento" in nombre for nombre in nombres)
+    assert not any("Formación continua" in nombre for nombre in nombres)
+
+    analisis = analizar_vacante(vacante, perfil_maestro=PERFIL_COMERCIO)
+    decision = evaluar_decision(analisis)
     assert analisis["adecuacion"] >= 70
     assert decision["estado"] == "POSTULAR"
     assert decision["numero_brechas_criticas"] == 0

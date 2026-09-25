@@ -13,6 +13,7 @@ from servicio_aplicacion import (
     construir_vacante_manual,
     leer_json_bytes,
     procesar_candidatura,
+    resumir_resultado_candidatura,
 )
 
 
@@ -81,6 +82,7 @@ def mostrar_resultado(resultado: dict) -> None:
     proceso = resultado.get("proceso", {})
     exportacion = resultado.get("exportacion", {})
     comunicaciones = resultado.get("comunicaciones", {})
+    resumen = resumir_resultado_candidatura(resultado)
 
     no_postular = proceso.get("estado") == "NO_POSTULAR"
     if no_postular:
@@ -91,10 +93,11 @@ def mostrar_resultado(resultado: dict) -> None:
     else:
         st.success("Candidatura procesada correctamente.")
 
-    columnas = st.columns(3)
-    columnas[0].metric("Decisión", proceso.get("estado", ""))
-    columnas[1].metric("IAP", proceso.get("iap", 0))
-    columnas[2].metric("Auditoría", proceso.get("auditoria", ""))
+    columnas = st.columns(4)
+    columnas[0].metric("Decisión", resumen["estado_proceso"])
+    columnas[1].metric("IAP", resumen["iap"])
+    columnas[2].metric("Auditoría", resumen["auditoria"])
+    columnas[3].metric("Documentos", resumen["estado_exportacion"])
 
     if no_postular:
         st.info(
@@ -108,6 +111,11 @@ def mostrar_resultado(resultado: dict) -> None:
             descargar_archivo(exportacion.get("docx", ""), "CV en DOCX")
         with col_pdf:
             descargar_archivo(exportacion.get("pdf", ""), "CV en PDF")
+        if not resumen["docx"]["disponible"] or not resumen["pdf"]["disponible"]:
+            st.error(
+                "La candidatura continuó, pero faltan documentos de salida. "
+                "Revise el diagnóstico técnico de esta ejecución."
+            )
 
     with st.expander("Comunicaciones"):
         carta = comunicaciones.get("carta")

@@ -6,10 +6,41 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from servicio_aplicacion import ServicioAplicacionError, procesar_candidatura
+from servicio_aplicacion import (
+    ServicioAplicacionError,
+    procesar_candidatura,
+    resumir_resultado_candidatura,
+)
 
 
 class PersistenciaInterfazTest(unittest.TestCase):
+    def test_resumen_confirma_documentos_reales_en_memoria(self):
+        resultado = {
+            "proceso": {
+                "estado": "PROCESADA",
+                "iap": 81.5,
+                "umbral_iap": 70.0,
+                "auditoria": "APROBADO",
+            },
+            "exportacion": {
+                "estado": "GENERADA",
+                "docx": {"nombre": "cv.docx", "contenido": b"DOCX"},
+                "pdf": {"nombre": "cv.pdf", "contenido": b"%PDF"},
+            },
+        }
+        resumen = resumir_resultado_candidatura(resultado)
+        self.assertEqual(resumen["estado_exportacion"], "GENERADA")
+        self.assertEqual(resumen["docx"], {"disponible": True, "bytes": 4})
+        self.assertEqual(resumen["pdf"], {"disponible": True, "bytes": 4})
+
+    def test_resumen_distingue_no_postular_de_error(self):
+        resumen = resumir_resultado_candidatura({
+            "proceso": {"estado": "NO_POSTULAR", "iap": 42.0},
+            "exportacion": {},
+        })
+        self.assertEqual(resumen["estado_exportacion"], "NO_GENERADA")
+        self.assertFalse(resumen["pdf"]["disponible"])
+
     def test_documentos_disponibles_en_memoria_y_temporal_eliminado(self):
         carpetas = []
 

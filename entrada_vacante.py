@@ -1007,6 +1007,8 @@ ENCABEZADOS_REQUISITOS = (
     "que necesitamos",
     "requirements",
     "qualifications",
+    "habilidades",
+    "competencias",
 )
 
 ENCABEZADOS_FUNCIONES = (
@@ -1033,8 +1035,35 @@ ENCABEZADOS_FIN = (
     "benefits",
 )
 
+ENCABEZADOS_CONTENIDO = (
+    "descripción completa del empleo",
+    "descripcion completa del empleo",
+    "descripción del empleo",
+    "descripcion del empleo",
+    "descripción del puesto",
+    "descripcion del puesto",
+    "job description",
+)
+
+MARCADORES_BENEFICIO = (
+    "descuento",
+    "vacaciones",
+    "bienestar",
+    "seguro médico",
+    "seguro medico",
+    "retribución flexible",
+    "retribucion flexible",
+    "formación continua",
+    "formacion continua",
+    "programa de formación",
+    "programa de formacion",
+    "incorporación a una gran compañía",
+    "incorporacion a una gran compania",
+)
+
 MARCADORES_DESEABLE = (
     "valorable",
+    "se valora",
     "se valorará",
     "se valorara",
     "deseable",
@@ -1057,6 +1086,8 @@ MARCADORES_OBLIGATORIO = (
     "debera",
     "mínimo",
     "minimo",
+    "mínima requerida",
+    "minima requerida",
     "al menos",
     "must have",
     "required",
@@ -1087,6 +1118,7 @@ def encabezado_seccion(
         ("requisitos", ENCABEZADOS_REQUISITOS),
         ("funciones", ENCABEZADOS_FUNCIONES),
         ("fin", ENCABEZADOS_FIN),
+        ("contenido", ENCABEZADOS_CONTENIDO),
     )
 
     for seccion, encabezados in grupos:
@@ -1258,11 +1290,29 @@ def extraer_requisitos(
 
     for linea in lineas:
 
+        linea_original = linea
+
         nueva_seccion, resto = (
             encabezado_seccion(linea)
         )
 
+        es_lista_habilidades = bool(
+            resto
+            and any(
+                normalizar(linea_original).startswith(
+                    normalizar(encabezado) + ":"
+                )
+                for encabezado in ("habilidades", "competencias")
+            )
+        )
+
         if nueva_seccion:
+
+            if nueva_seccion == "contenido":
+                # Los portales pueden mostrar un resumen de beneficios antes
+                # de la descripción real. Esta cabecera reinicia el análisis.
+                seccion = ""
+                continue
 
             if nueva_seccion == "fin":
                 # Mantener el estado evita que las viñetas de salario,
@@ -1279,6 +1329,9 @@ def extraer_requisitos(
             linea = resto
 
         n = normalizar(linea)
+
+        if any(normalizar(x) in n for x in MARCADORES_BENEFICIO):
+            continue
 
         explicito = any(
             normalizar(x) in n
@@ -1310,9 +1363,14 @@ def extraer_requisitos(
         if not incluir:
             continue
 
-        for fragmento in fragmentar_linea(
-            linea
-        ):
+        # Las cabeceras «Habilidades: A, B, C» contienen elementos
+        # independientes; separarlos evita puntuar el bloque como una sola idea.
+        if es_lista_habilidades:
+            fragmentos = [limpiar(x) for x in resto.split(",") if limpiar(x)]
+        else:
+            fragmentos = fragmentar_linea(linea)
+
+        for fragmento in fragmentos:
 
             if len(fragmento) < 5:
                 continue

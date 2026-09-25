@@ -173,9 +173,42 @@ def construir_vacante_manual(
     try:
         return construir_vacante(fuente)
     except Exception as error:
-        raise ServicioAplicacionError(
-            "No fue posible validar los datos de la vacante."
-        ) from error
+        detalle = str(error).strip()
+        mensaje = "No fue posible validar los datos de la vacante."
+        if detalle:
+            mensaje += f" {detalle}"
+        raise ServicioAplicacionError(mensaje) from error
+
+
+def resumir_resultado_candidatura(resultado: Dict[str, Any]) -> Dict[str, Any]:
+    """Expone estados y artefactos sin revelar contenido privado."""
+    proceso = resultado.get("proceso", {}) or {}
+    exportacion = resultado.get("exportacion", {}) or {}
+
+    def artefacto(clave: str) -> Dict[str, Any]:
+        dato = exportacion.get(clave)
+        contenido = dato.get("contenido", b"") if isinstance(dato, dict) else b""
+        return {
+            "disponible": bool(contenido),
+            "bytes": len(contenido),
+        }
+
+    estado_proceso = proceso.get("estado", "NO_INFORMADO")
+    estado_exportacion = exportacion.get("estado")
+    if not estado_exportacion:
+        estado_exportacion = (
+            "NO_GENERADA" if estado_proceso == "NO_POSTULAR" else "NO_INFORMADA"
+        )
+
+    return {
+        "estado_proceso": estado_proceso,
+        "iap": proceso.get("iap", 0),
+        "umbral_iap": proceso.get("umbral_iap", 70),
+        "auditoria": proceso.get("auditoria", "NO_INFORMADA"),
+        "estado_exportacion": estado_exportacion,
+        "docx": artefacto("docx"),
+        "pdf": artefacto("pdf"),
+    }
 
 
 def procesar_candidatura(

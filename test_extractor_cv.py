@@ -126,6 +126,29 @@ Atención al cliente
     }]
 
 
+def test_formacion_reconstruye_lineas_cortadas_por_pdf():
+    texto = """LEIDY ALEXANDRA MONTAÑO MORENO
+PERFIL
+Atención al cliente.
+FORMACIÓN
+Bachiller Académico
+Institución Educativa Julia Restrepo — Colombia
+| 2003
+EXPERIENCIA
+ALMACÉN LA GANGA Cajera | 2011 - 2022 Atención al cliente.
+COMPETENCIAS
+Atención al cliente
+"""
+
+    borrador = proponer_borrador(texto)
+
+    assert borrador["formacion"] == [{
+        "titulo": "Bachiller Académico",
+        "institucion": "Institución Educativa Julia Restrepo — Colombia",
+        "periodo": "2003",
+    }]
+
+
 def test_rechaza_extension_no_admitida():
     with pytest.raises(ExtractorCVError, match="PDF o DOCX"):
         extraer_texto_cv(b"contenido", "cv.txt")
