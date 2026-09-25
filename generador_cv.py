@@ -393,24 +393,56 @@ def palabras_contexto(
 
     palabras: List[str] = []
 
-    for requisito in vacante.get(
-        "requisitos",
-        [],
-    ):
+    # El titulo describe la familia ocupacional y debe participar en la
+    # seleccion del contenido. Antes solo se miraban los requisitos, lo que
+    # dejaba fuera evidencias obvias como caja, inventario o mercancia.
+    textos = [
+        vacante.get("titulo", ""),
+        *(
+            requisito.get("nombre", "")
+            for requisito in vacante.get("requisitos", [])
+            if isinstance(requisito, dict)
+        ),
+    ]
 
-        nombre = normalizar(
-            requisito.get(
-                "nombre",
-                "",
-            )
-        )
+    palabras_genericas = {
+        "auxiliar", "experiencia", "previa", "formacion", "minima",
+        "requerida", "obligatoria", "obligatorio", "deseable",
+        "habilidad", "habilidades", "puesto", "empleo", "trabajo",
+    }
 
-        for palabra in nombre.split():
+    for texto in textos:
+        nombre = normalizar(texto)
 
-            if len(palabra) >= 5:
+        for palabra in re.findall(r"[a-z0-9]+", nombre):
+
+            if (
+                len(palabra) >= 4
+                and palabra not in palabras_genericas
+            ):
                 palabras.append(
                     palabra
                 )
+
+    titulo = normalizar(vacante.get("titulo", ""))
+
+    # Vocabulario ocupacional controlado. Solo ayuda a seleccionar evidencia
+    # que ya existe en el Perfil Maestro; nunca crea experiencia nueva.
+    familias = (
+        (
+            {"caja", "cajero", "cajera", "reposicion", "reponedor"},
+            (
+                "caja", "cobro", "datafono", "cliente", "venta",
+                "asesoramiento", "inventario", "mercancia", "producto",
+                "reposicion",
+            ),
+        ),
+    )
+
+    tokens_titulo = set(re.findall(r"[a-z0-9]+", titulo))
+    for activadores, relacionados in familias:
+        if tokens_titulo & activadores:
+            palabras.extend(relacionados)
 
     return unicos(palabras)
 
@@ -558,11 +590,11 @@ def funciones_relevantes(
 
         # Una funcion entra solamente si:
         # 1. tiene evidencia directa, o
-        # 2. tiene al menos dos coincidencias claras
-        #    con el contexto concreto de la vacante.
+        # 2. tiene una coincidencia clara con el contexto ocupacional
+        #    concreto de la vacante.
         if (
             coincidencias_directas == 0
-            and coincidencias_contexto < 2
+            and coincidencias_contexto < 1
         ):
             continue
 
@@ -798,12 +830,9 @@ def seleccionar_experiencias(
             )
         )
 
-    evaluadas.sort(
-        key=lambda elemento: (
-            -elemento[0],
-            elemento[1],
-        )
-    )
+    # Conserva el orden profesional del Perfil Maestro entre las experiencias
+    # pertinentes (normalmente de la más reciente a la más antigua).
+    evaluadas.sort(key=lambda elemento: elemento[1])
 
     return [
         experiencia
@@ -857,6 +886,11 @@ def seleccionar_formacion(
         if any(
             termino in texto
             for termino in (
+                "bachiller",
+                "secundaria",
+                "educacion media",
+                "tecnico",
+                "tecnologo",
                 "licenciatura",
                 "pedagog",
                 "formacion profesional",
@@ -918,9 +952,27 @@ def seleccionar_competencias(
 
     evaluadas = []
 
+    finales_invalidos = {
+        "a", "al", "de", "del", "en", "la", "las", "el", "los",
+        "para", "por", "y", "o", "con",
+    }
+
     for indice, competencia in enumerate(
         todas
     ):
+
+        normalizada = normalizar(competencia)
+        palabras = normalizada.split()
+
+        # Evita convertir restos de extracción del PDF en etiquetas visibles.
+        if (
+            len(palabras) < 2
+            or len(palabras) > 10
+            or palabras[-1] in finales_invalidos
+            or "donde pueda" in normalizada
+            or normalizada.startswith("amplia experiencia en")
+        ):
+            continue
 
         puntos = puntuacion_relevancia(
             competencia,
@@ -940,12 +992,9 @@ def seleccionar_competencias(
             )
         )
 
-    evaluadas.sort(
-        key=lambda elemento: (
-            -elemento[0],
-            elemento[1],
-        )
-    )
+    # Conserva el orden confirmado por el usuario entre las competencias
+    # pertinentes; el puntaje decide inclusión, no reescribe su jerarquía.
+    evaluadas.sort(key=lambda elemento: elemento[1])
 
     return [
         competencia
@@ -963,6 +1012,7 @@ def seleccionar_competencias(
 def construir_perfil_profesional(
     perfil: Dict[str, Any],
     analisis: Dict[str, Any],
+    competencias_seleccionadas: Sequence[str] = (),
 ) -> str:
 
     base = limpiar(
@@ -1004,39 +1054,23 @@ def construir_perfil_profesional(
         base,
     )
 
-    fortalezas = []
+    # Las fortalezas visibles proceden de competencias completas y confirmadas,
+    # no de fragmentos internos usados por el comparador.
+    palabras_base = set(normalizar(base).split())
 
-    for resultado in analisis.get(
-        "resultados",
-        [],
-    ):
+    def aporta_informacion_nueva(fortaleza: str) -> bool:
+        palabras_clave = {
+            palabra
+            for palabra in normalizar(fortaleza).split()
+            if len(palabra) >= 4
+        }
+        return bool(palabras_clave - palabras_base)
 
-        if resultado.get(
-            "nivel"
-        ) != "DIRECTO":
-            continue
-
-        nombre = normalizar(
-            resultado.get(
-                "nombre",
-                "",
-            )
-        )
-
-        # La titulacion ya aparece en Formacion.
-        if "titulacion" in nombre:
-            continue
-
-        fortalezas.extend(
-            resultado.get(
-                "evidencia_directa",
-                [],
-            )
-        )
-
-    fortalezas = unicos(
-        fortalezas
-    )[:3]
+    fortalezas = [
+        fortaleza
+        for fortaleza in unicos(competencias_seleccionadas)
+        if aporta_informacion_nueva(fortaleza)
+    ][:3]
 
     if base and fortalezas:
 
@@ -1139,6 +1173,7 @@ def construir_cv(
         construir_perfil_profesional(
             perfil,
             analisis,
+            competencias,
         )
     )
 
