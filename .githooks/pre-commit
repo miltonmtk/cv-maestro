@@ -1,0 +1,2 @@
+#!/bin/sh
+python scripts/security_guard.py || exit 1
