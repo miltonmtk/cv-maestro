@@ -40,3 +40,14 @@ FOTO*.jpeg
 foto*.png
 foto*.jpg
 foto*.jpeg
+
+# Seguridad adicional
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+*credentials*
+*secret*
+PRUEBA_SEGURIDAD.tmp
